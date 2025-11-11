@@ -1,0 +1,1353 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  
+  <!-- Impede zoom com os dedos em dispositivos móveis -->
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+
+  <title>Painel</title>
+  <link rel="icon" type="image/png" href="favicon.ico">
+
+  <!-- Firebase -->
+  <script src="https://www.gstatic.com/firebasejs/9.6.11/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.11/firebase-firestore-compat.js"></script>
+  <style>
+    /* Reset e configurações gerais */
+    :root {
+      --primary-color: #d32f2f;
+      --primary-dark: #b71c1c;
+      --primary-light: #ff6659;
+      --secondary-color: #ffd54f;
+      --secondary-dark: #ffc107;
+      --secondary-light: #ffecb3;
+      --success-color: #388e3c;
+      --warning-color: #ffa000;
+      --danger-color: #d32f2f;
+      --light-bg: #f5f5f5;
+      --border-color: #e0e0e0;
+      --text-primary: #212121;
+      --text-secondary: #757575;
+      --text-light: #9e9e9e;
+      --shadow-light: 0 2px 8px rgba(0, 0, 0, 0.08);
+      --shadow-medium: 0 4px 12px rgba(0, 0, 0, 0.12);
+      --shadow-heavy: 0 10px 30px rgba(0, 0, 0, 0.15);
+    }
+    
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      margin: 0;
+      padding: 0;
+      background-color: var(--light-bg);
+      color: #333;
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    /* Layout de aplicativo nativo - CORREÇÃO DO CABEÇALHO */
+    .app-header {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+      padding: 15px 20px;
+      box-shadow: var(--shadow-medium);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 70px;
+    }
+
+    .app-title {
+      color: white;
+      font-size: 1.5em;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      text-align: center;
+      position: absolute;
+      left: 50%;
+      transform: translateX(-50%);
+      margin: 0;
+    }
+
+    /* Menu Button Styles - POSICIONADO ABSOLUTAMENTE */
+    .menu-container {
+      position: absolute;
+      right: 20px;
+      top: 50%;
+      transform: translateY(-50%);
+    }
+
+    .menu-button {
+      background: rgba(255, 255, 255, 0.2);
+      border: none;
+      font-size: 1.5em;
+      cursor: pointer;
+      padding: 8px 12px;
+      border-radius: 50%;
+      transition: background-color 0.3s ease;
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 44px;
+      height: 44px;
+    }
+
+    .menu-button:hover {
+      background-color: rgba(255, 255, 255, 0.3);
+    }
+
+    .dropdown-menu {
+      position: absolute;
+      top: 100%;
+      right: 0;
+      background: white;
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      box-shadow: var(--shadow-medium);
+      min-width: 200px;
+      z-index: 1000;
+      display: none;
+      margin-top: 5px;
+      overflow: hidden;
+    }
+
+    .dropdown-menu.show {
+      display: block;
+      animation: fadeIn 0.2s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .dropdown-item {
+      display: block;
+      width: 100%;
+      padding: 12px 16px;
+      border: none;
+      background: none;
+      text-align: left;
+      cursor: pointer;
+      font-size: 0.9em;
+      color: var(--text-primary);
+      transition: background-color 0.2s ease;
+      border-bottom: 1px solid #f0f0f0;
+    }
+
+    .dropdown-item:last-child {
+      border-bottom: none;
+    }
+
+    .dropdown-item:hover {
+      background-color: var(--secondary-light);
+    }
+
+    .dropdown-item i {
+      margin-right: 8px;
+      width: 16px;
+      text-align: center;
+    }
+
+    /* Conteúdo principal sem limitação de container */
+    .main-content {
+      padding: 20px;
+      max-width: 100%;
+    }
+
+    /* Seções de conteúdo */
+    .content-section {
+      margin-bottom: 30px;
+      padding: 20px;
+      background: white;
+      border-radius: 12px;
+      box-shadow: var(--shadow-light);
+      animation: fadeIn 0.5s ease-in;
+    }
+
+    .section-title {
+      color: var(--text-primary);
+      font-size: 1.3em;
+      margin-bottom: 15px;
+      padding-bottom: 10px;
+      border-bottom: 2px solid var(--secondary-light);
+      font-weight: 600;
+    }
+
+    /* Navegação por dia - estilo aplicativo */
+    .dia-navegacao {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 20px;
+      gap: 15px;
+      background: white;
+      padding: 15px;
+      border-radius: 12px;
+      box-shadow: var(--shadow-light);
+    }
+
+    /* Botões de seta com área de clique maior */
+    .navegacao-seta {
+      background: none;
+      border: none;
+      font-size: 1.8em;
+      color: var(--primary-color);
+      cursor: pointer;
+      padding: 15px;
+      border-radius: 12px;
+      transition: all 0.3s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 60px;
+      min-height: 60px;
+    }
+
+    .navegacao-seta:hover {
+      background-color: var(--secondary-light);
+      transform: scale(1.1);
+    }
+
+    .navegacao-seta:disabled {
+      color: #ccc;
+      cursor: not-allowed;
+    }
+
+    .navegacao-seta:disabled:hover {
+      background-color: transparent;
+      transform: none;
+    }
+
+    .dia-atual {
+      background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+      color: white;
+      padding: 12px 24px;
+      border-radius: 25px;
+      font-weight: 600;
+      font-size: 1.1em;
+      box-shadow: 0 4px 15px rgba(211, 47, 47, 0.3);
+      min-width: 160px;
+      text-align: center;
+    }
+
+    /* Container do dia atual */
+    .dia-container {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+      max-width: 500px;
+      margin: 0 auto;
+    }
+
+    .agenda-card {
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      justify-content: space-between;
+      background-color: #ffffff;
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      padding: 12px 15px;
+      gap: 10px;
+      font-size: 0.9em;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+      transition: all 0.3s ease;
+      min-height: 60px;
+      position: relative;
+      border-left: 4px solid transparent;
+      animation: slideUp 0.3s ease-out;
+    }
+
+    @keyframes slideUp {
+      from { 
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      to { 
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .agenda-card:hover {
+      transform: translateY(-3px);
+      box-shadow: var(--shadow-medium);
+    }
+
+    .agenda-card.today {
+      border-left-color: var(--primary-color);
+    }
+
+    .agenda-card.pendente {
+      border-left-color: var(--warning-color);
+    }
+
+    .agenda-card.concluido {
+      opacity: 0.7;
+      background: var(--light-bg);
+      border-left-color: var(--success-color);
+    }
+
+    .agenda-card.folga {
+      background: var(--light-bg);
+      text-align: center;
+      font-weight: bold;
+      color: var(--text-light);
+    }
+
+    .status-badge {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      padding: 4px 8px;
+      border-radius: 12px;
+      font-size: 0.7em;
+      font-weight: 600;
+      background: var(--success-color);
+      color: white;
+    }
+
+    .status-badge.pendente {
+      background: var(--warning-color);
+    }
+
+    .card-header,
+    .card-body {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 2px;
+      flex: 1;
+    }
+
+    .card-header {
+      font-weight: 600;
+      color: var(--text-secondary);
+    }
+
+    .card-time {
+      color: var(--primary-color);
+      font-weight: bold;
+      font-size: 0.85em;
+    }
+
+    .card-body p {
+      margin: 0;
+      font-size: 0.85em;
+      color: #444;
+      line-height: 1.3;
+    }
+
+    .card-actions {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      flex-shrink: 0;
+    }
+
+    /* Botões de ação com ícones SVG */
+    .card-actions button {
+      background-color: #ffffff;
+      color: var(--success-color);
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      padding: 8px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 36px;
+      height: 36px;
+    }
+
+    .card-actions button:hover {
+      background-color: var(--secondary-light);
+      transform: scale(1.1);
+    }
+
+    .card-actions button svg {
+      width: 16px;
+      height: 16px;
+    }
+
+    .agenda-card.adicionar {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 60px;
+      padding: 10px 15px;
+      background-color: #ffebee;
+      border: 2px dashed #ffcdd2;
+      border-radius: 10px;
+      font-size: 0.9em;
+      color: var(--primary-color);
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .agenda-card.adicionar:hover {
+      background-color: #ffcdd2;
+      border-color: var(--primary-light);
+      transform: translateY(-3px);
+      box-shadow: var(--shadow-medium);
+    }
+
+    .agenda-card.adicionar .add-icon {
+      margin-bottom: 8px;
+    }
+
+    .agenda-card.adicionar p {
+      color: var(--primary-color);
+      font-weight: 600;
+    }
+
+    /* ESTILO PARA O ESTADO VAZIO - CORRIGIDO */
+    .empty-state {
+      text-align: center;
+      padding: 40px 20px;
+      color: var(--text-light);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+    }
+
+    .empty-state svg {
+      width: 64px;
+      height: 64px;
+      margin-bottom: 15px;
+      opacity: 0.5;
+    }
+
+    .empty-state p {
+      margin: 0;
+      font-size: 1em;
+      color: var(--text-light);
+    }
+
+    .loading-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 40px 20px;
+      color: var(--text-light);
+      text-align: center;
+      width: 100%;
+    }
+
+    .loading-spinner {
+      border: 3px solid #f3f3f3;
+      border-top: 3px solid var(--primary-color);
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      animation: spin 1s linear infinite;
+      margin-bottom: 15px;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    /* Responsive Design */
+    @media (max-width: 768px) {
+      .app-header {
+        padding: 12px 15px;
+        min-height: 60px;
+      }
+
+      .app-title {
+        font-size: 1.3em;
+      }
+
+      .menu-container {
+        right: 15px;
+      }
+
+      .main-content {
+        padding: 15px;
+      }
+
+      .content-section {
+        padding: 15px;
+      }
+
+      .dia-navegacao {
+        gap: 10px;
+      }
+
+      .navegacao-seta {
+        font-size: 1.5em;
+        padding: 12px;
+        min-width: 50px;
+        min-height: 50px;
+      }
+
+      .dia-atual {
+        padding: 10px 20px;
+        font-size: 1em;
+        min-width: 130px;
+      }
+
+      .dia-container {
+        max-width: 100%;
+      }
+
+      .fixed-add-button {
+        bottom: 20px;
+        right: 20px;
+        width: 50px;
+        height: 50px;
+        font-size: 1.8em;
+      }
+
+      .button-group {
+        flex-direction: column;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .app-title {
+        font-size: 1.2em;
+      }
+
+      .dia-navegacao {
+        gap: 8px;
+      }
+
+      .navegacao-seta {
+        font-size: 1.3em;
+        padding: 10px;
+        min-width: 45px;
+        min-height: 45px;
+      }
+
+      .dia-atual {
+        padding: 8px 16px;
+        font-size: 0.9em;
+        min-width: 120px;
+      }
+
+      .agenda-card {
+        flex-direction: column;
+        text-align: center;
+      }
+      
+      .card-actions {
+        justify-content: center;
+        margin-top: 10px;
+      }
+
+      .modal-content input {
+        margin-bottom: 15px;
+      }
+
+      .modal-content button {
+        display: block;
+        width: calc(100% - 20px);
+        margin: 10px auto;
+      }
+
+      .fixed-add-button {
+        bottom: 15px;
+        right: 15px;
+        width: 45px;
+        height: 45px;
+        font-size: 1.6em;
+      }
+
+      .dropdown-menu {
+        min-width: 180px;
+        right: -10px;
+      }
+    }
+
+    /* Botões aprimorados */
+    .btn-primary {
+      background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-weight: 600;
+      transition: all 0.3s ease;
+      cursor: pointer;
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(211, 47, 47, 0.3);
+    }
+
+    .btn-secondary {
+      background: var(--secondary-color);
+      color: var(--text-primary);
+      border: none;
+      padding: 12px 24px;
+      border-radius: 8px;
+      transition: all 0.3s ease;
+      cursor: pointer;
+      font-weight: 600;
+    }
+
+    .btn-secondary:hover {
+      background: var(--secondary-dark);
+      transform: translateY(-2px);
+    }
+
+    /* Modals */
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 1000;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      overflow: auto;
+      background-color: rgba(0, 0, 0, 0.5);
+      justify-content: center;
+      align-items: center;
+      backdrop-filter: blur(5px);
+    }
+
+    .modal-content {
+      background-color: #ffffff;
+      margin: auto;
+      padding: 30px;
+      border-radius: 16px;
+      box-shadow: var(--shadow-heavy);
+      width: 90%;
+      max-width: 500px;
+      text-align: center;
+      animation: modalEnter 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      border: none;
+    }
+
+    @keyframes modalEnter {
+      from {
+        opacity: 0;
+        transform: scale(0.9) translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+      }
+    }
+
+    .modal-content h3 {
+      color: var(--text-primary);
+      margin-bottom: 25px;
+      font-size: 1.5em;
+    }
+
+    .modal-content input[type="number"],
+    .modal-content input[type="text"],
+    .modal-content input[type="date"],
+    .modal-content input[type="file"] {
+      width: calc(100% - 20px);
+      padding: 12px;
+      margin-bottom: 20px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      font-size: 1em;
+      box-sizing: border-box;
+    }
+
+    .modal-content button {
+      background-color: var(--primary-color);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      padding: 12px 25px;
+      margin: 0 10px;
+      cursor: pointer;
+      font-size: 1em;
+      transition: background-color 0.3s ease, transform 0.2s ease;
+      font-weight: 600;
+    }
+
+    .modal-content button:hover {
+      background-color: var(--primary-dark);
+      transform: translateY(-2px);
+    }
+
+    .modal-content button:last-child {
+      background-color: var(--secondary-color);
+      color: var(--text-primary);
+    }
+
+    .modal-content button:last-child:hover {
+      background-color: var(--secondary-dark);
+    }
+
+    .button-group {
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+      margin-top: 20px;
+    }
+
+    .button-group button {
+      flex: 1;
+    }
+
+    /* Fixed Add Button */
+    .fixed-add-button {
+      position: fixed;
+      bottom: 30px;
+      right: 30px;
+      background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+      color: white;
+      border: none;
+      border-radius: 50%;
+      width: 60px;
+      height: 60px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2em;
+      cursor: pointer;
+      box-shadow: var(--shadow-heavy);
+      transition: background-color 0.3s ease, transform 0.2s ease;
+      z-index: 1000;
+    }
+
+    .fixed-add-button:hover {
+      background: linear-gradient(135deg, var(--primary-dark), #8b0000);
+      transform: scale(1.1);
+    }
+  </style>
+</head>
+<link rel="manifest" href="manifest.json">
+<body>
+  <!-- Cabeçalho fixo estilo aplicativo - CORRIGIDO -->
+  <div class="app-header">
+    <h1 class="app-title">Painel Administrativo</h1>
+    <div class="menu-container">
+      <button class="menu-button" onclick="toggleMenu()">⋯</button>
+      <div class="dropdown-menu" id="dropdownMenu">
+        <button class="dropdown-item" onclick="window.open('./folgas.html', '_blank')">
+          <i>⚙️</i> Folgas
+        </button>
+        <button class="dropdown-item" onclick="window.open('./agendamentos.html', '_blank')">
+          <i>📅</i> Agendamentos
+        </button>
+        <button class="dropdown-item" onclick="window.open('./registros.html', '_blank')">
+          <i>📋</i> Registros
+        </button>
+        <button class="dropdown-item" onclick="window.open('./financeiro.html', '_blank')">
+          <i>💰</i> Financeiro
+        </button>
+        <!-- Botão Links removido conforme solicitado -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Conteúdo principal sem container limitante -->
+  <div class="main-content">
+    <!-- Navegação por dia - estilo aplicativo -->
+    <div class="content-section">
+      <div class="dia-navegacao">
+        <button class="navegacao-seta" id="setaEsquerda">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="15 18 9 12 15 6"></polyline>
+          </svg>
+        </button>
+        <div class="dia-atual" id="diaAtualDisplay">Carregando...</div>
+        <button class="navegacao-seta" id="setaDireita">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="9 18 15 12 9 6"></polyline>
+          </svg>
+        </button>
+      </div>
+      
+      <!-- Container do dia atual -->
+      <div class="dia-container" id="diaContainer">
+        <div class="loading-container">
+          <div class="loading-spinner"></div>
+          <div>Carregando agendamentos...</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modals -->
+  <div id="modalPagamento" class="modal" style="display: none;">
+    <div class="modal-content">
+      <h3>Valor Recebido</h3>
+      <input type="number" id="valorPago" placeholder="Digite o valor em R$" />
+      <div class="button-group">
+        <button id="confirmarPagamento" class="btn-primary">Confirmar</button>
+        <button onclick="fecharModal()" class="btn-secondary">Cancelar</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="modalNovoAgendamento" class="modal" style="display: none;">
+    <div class="modal-content">
+      <h3>Novo Agendamento</h3>
+      <input type="text" id="novoNome" placeholder="Nome do cliente" />
+      <input type="number" id="novaQuantidade" placeholder="Qtd. Alicates" style="width: 100px;" />
+      <div class="button-group">
+        <button id="confirmarNovoAgendamento" class="btn-primary">Salvar</button>
+        <button onclick="fecharModalNovoAgendamento()" class="btn-secondary">Cancelar</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="modalEditarAgendamento" class="modal" style="display: none;">
+    <div class="modal-content">
+      <h3>Editar Agendamento</h3>
+      <input type="text" id="editarNome" placeholder="Nome do cliente" />
+      <input type="number" id="editarQuantidade" placeholder="Qtd. Alicates" style="width: 100px;" />
+      <div class="button-group">
+        <button id="confirmarEditarAgendamento" class="btn-primary">Salvar</button>
+        <button onclick="fecharModalEditarAgendamento()" class="btn-secondary">Cancelar</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="modalSelecionarData" class="modal" style="display: none;">
+    <div class="modal-content">
+      <h3>Selecionar Data</h3>
+      <input type="date" id="dataAgendamento" />
+      <div class="button-group">
+        <button id="confirmarData" class="btn-primary">Confirmar</button>
+        <button onclick="fecharModalSelecionarData()" class="btn-secondary">Cancelar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Links removido conforme solicitado -->
+
+  <!-- Fixed Add Button -->
+  <button class="fixed-add-button" onclick="abrirModalSelecionarData()">+</button>
+
+  <script>
+    // ===========================================
+    // FUNÇÕES DE FUSO HORÁRIO - MANAUS (UTC-4)
+    // ===========================================
+    
+    // Função para obter a data atual em Manaus (UTC-4)
+    function getDataManaus() {
+      const agora = new Date();
+      // Manaus está em UTC-4, então subtraímos 4 horas do UTC
+      const offsetManaus = -4 * 60; // em minutos
+      const offsetLocal = agora.getTimezoneOffset(); // offset local em minutos
+      const diferencaOffset = offsetManaus - offsetLocal;
+      
+      // Ajustar a data para o fuso horário de Manaus
+      const dataManaus = new Date(agora.getTime() + diferencaOffset * 60000);
+      return dataManaus;
+    }
+    
+    // Função para converter uma data para o fuso de Manaus
+    function converterParaManaus(data) {
+      const offsetManaus = -4 * 60; // em minutos
+      const offsetLocal = data.getTimezoneOffset(); // offset local em minutos
+      const diferencaOffset = offsetManaus - offsetLocal;
+      
+      return new Date(data.getTime() + diferencaOffset * 60000);
+    }
+    
+    // Função para formatar data no formato brasileiro
+    function formatarDataBrasileira(dataStr) {
+      const partes = dataStr.split("-");
+      if (partes.length === 3) {
+        return `${partes[2]}/${partes[1]}/${partes[0]}`;
+      }
+      return dataStr;
+    }
+
+    function formatarValor(valor) {
+      return valor.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+    }
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyBP3rhyHOKpCTt6PKQdjgVtprUmoLy09wg",
+      authDomain: "d-amolador.firebaseapp.com",
+      projectId: "d-amolador",
+      storageBucket: "d-amolador.firebasestorage.app",
+      messagingSenderId: "882919276636",
+      appId: "1:882919276636:web:5f8c8ad014f30b0a5c6699"
+    };
+    
+    // Inicializar Firebase
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
+    let agendamentoAtual = null;
+    let editarAgendamentoAtual = null;
+    let dataParaNovoAgendamento = null;
+    let currentIndex = 0;
+    let diasData = [];
+
+    // Funções do Menu
+    function toggleMenu() {
+      const menu = document.getElementById('dropdownMenu');
+      menu.classList.toggle('show');
+    }
+
+    // Função abrirModalLinks removida conforme solicitado
+
+    // Função fecharModalLinks removida conforme solicitado
+
+    // Funções de Gerenciamento de Links removidas conforme solicitado
+
+    // Fechar menu quando clicar fora
+    document.addEventListener('click', function(event) {
+      const menu = document.getElementById('dropdownMenu');
+      const menuButton = document.querySelector('.menu-button');
+      if (!menu.contains(event.target) && !menuButton.contains(event.target)) {
+        menu.classList.remove('show');
+      }
+    });
+
+    // Função otimizada para carregar agendamentos
+    async function carregarAgendamentos() {
+      const container = document.getElementById("diaContainer");
+      
+      // Mostrar loading
+      container.innerHTML = `
+        <div class="loading-container">
+          <div class="loading-spinner"></div>
+          <div>Carregando agendamentos...</div>
+        </div>
+      `;
+
+      // Usar a data de Manaus como referência
+      const hojeManaus = getDataManaus();
+      diasData = [];
+      
+      // Gerar array de datas (11 dias: 5 anteriores, hoje, 5 posteriores)
+      for (let i = -5; i <= 5; i++) {
+        const date = new Date(hojeManaus);
+        date.setDate(hojeManaus.getDate() + i);
+        // Formatar como YYYY-MM-DD
+        const dataStr = date.toISOString().split("T")[0];
+        diasData.push(dataStr);
+      }
+
+      try {
+        // Busca todos os agendamentos dos próximos dias de uma vez usando Promise.all
+        const promises = diasData.map(async (dataStr) => {
+          const horariosSnapshot = await db.collection("agendamentos")
+            .doc(dataStr)
+            .collection("horarios")
+            .get();
+          return { dataStr, horariosSnapshot };
+        });
+
+        const resultados = await Promise.all(promises);
+        
+        // Armazenar resultados para uso posterior
+        window.agendamentosCache = {};
+        resultados.forEach(({ dataStr, horariosSnapshot }) => {
+          window.agendamentosCache[dataStr] = horariosSnapshot;
+        });
+
+        // Encontrar índice do dia atual (em Manaus)
+        const hojeStr = hojeManaus.toISOString().split("T")[0];
+        currentIndex = diasData.indexOf(hojeStr);
+        if (currentIndex === -1) currentIndex = 0;
+        
+        // Exibir o dia atual
+        exibirDiaAtual();
+
+        // Configurar event listeners para as setas
+        document.getElementById("setaEsquerda").addEventListener("click", () => {
+          if (currentIndex > 0) {
+            currentIndex--;
+            exibirDiaAtual();
+          }
+        });
+
+        document.getElementById("setaDireita").addEventListener("click", () => {
+          if (currentIndex < diasData.length - 1) {
+            currentIndex++;
+            exibirDiaAtual();
+          }
+        });
+
+      } catch (error) {
+        console.error("Erro ao carregar agendamentos:", error);
+        container.innerHTML = `
+          <div class="loading-container">
+            <div>Erro ao carregar agendamentos. Tente novamente.</div>
+          </div>
+        `;
+      }
+    }
+
+    function exibirDiaAtual() {
+      const dataStr = diasData[currentIndex];
+      const horariosSnapshot = window.agendamentosCache[dataStr];
+      const container = document.getElementById("diaContainer");
+      const display = document.getElementById("diaAtualDisplay");
+      
+      // Atualizar display do dia - usar apenas UMA declaração
+      const hojeManaus = getDataManaus();
+      const hojeStr = hojeManaus.toISOString().split("T")[0];
+      const textoDisplay = dataStr === hojeStr ? "Hoje" : formatarDataBrasileira(dataStr);
+      display.textContent = textoDisplay;
+      
+      // Limpar container
+      container.innerHTML = "";
+      
+      // Verificar se não há agendamentos
+      if (!horariosSnapshot || horariosSnapshot.empty) {
+        container.innerHTML = `
+          <div class="empty-state">
+            <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+              <line x1="16" y1="2" x2="16" y2="6"></line>
+              <line x1="8" y1="2" x2="8" y2="6"></line>
+              <line x1="3" y1="10" x2="21" y2="10"></line>
+            </svg>
+            <p>Nenhum agendamento para esta data</p>
+          </div>
+        `;
+        
+        // Adicionar card de "Adicionar Agendamento" mesmo quando vazio
+        const cardAdd = document.createElement("div");
+        cardAdd.className = "agenda-card adicionar";
+        cardAdd.innerHTML = `
+          <div class="add-icon">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#d32f2f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="12" y1="5" x2="12" y2="19" />
+              <line x1="5" y1="12" x2="19" y2="12" />
+            </svg>
+          </div>
+          <p>Adicionar Agendamento</p>
+        `;
+        cardAdd.onclick = () => adicionarAgendamentoExtra(dataStr);
+        container.appendChild(cardAdd);
+        
+        // Atualizar estado das setas
+        document.getElementById("setaEsquerda").disabled = currentIndex === 0;
+        document.getElementById("setaDireita").disabled = currentIndex === diasData.length - 1;
+        return;
+      }
+      
+      // Criar cards para este dia - REUTILIZAR a variável já declarada
+      const cards = [];
+
+      horariosSnapshot.forEach(doc => {
+        const dados = doc.data();
+        const horarioStr = doc.id;
+        const card = document.createElement("div");
+        const hojeClass = dataStr === hojeStr ? " today" : "";
+        const statusClass = dados.concluido ? " concluido" : " pendente";
+        
+        card.className = "agenda-card" + hojeClass + statusClass + (dados.nome === "Folga" ? " folga" : "");
+        
+        if (dados.nome === "Folga") {
+          card.innerHTML = `<div class="card-header">Folga</div>`;
+        } else {
+          card.innerHTML = `
+            <div class="status-badge ${dados.concluido ? '' : 'pendente'}">${dados.concluido ? 'Concluído' : 'Pendente'}</div>
+            <div class="card-header">
+              <span class="card-date">${formatarDataBrasileira(dataStr)}</span>
+            </div>
+            <div class="card-body">
+              <p><strong>Nome:</strong> ${dados.nome}</p>
+              <p><strong>Qtd:</strong> ${dados.quantidade}</p>
+            </div>
+            <div class="card-actions">
+              <button title="Concluir" onclick="abrirModal('${dataStr}', '${horarioStr}', '${dados.nome}')">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#28a745" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="20 6 9 17 4 12"></polyline>
+                </svg>
+              </button>
+              <button title="Editar" onclick="abrirModalEditar('${dataStr}', '${horarioStr}', '${dados.nome}', ${dados.quantidade})">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#d32f2f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                  <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                </svg>
+              </button>
+              <button title="Excluir" onclick="excluirAgendamento('${dataStr}', '${horarioStr}')">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#d32f2f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="3 6 5 6 21 6"></polyline>
+                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                  <line x1="10" y1="11" x2="10" y2="17"></line>
+                  <line x1="14" y1="11" x2="14" y2="17"></line>
+                </svg>
+              </button>
+            </div>
+          `;
+        }
+        cards.push(card);
+      });
+
+      cards.forEach(c => container.appendChild(c));
+
+      // Adicionar card de "Adicionar Agendamento"
+      const cardAdd = document.createElement("div");
+      cardAdd.className = "agenda-card adicionar";
+      cardAdd.innerHTML = `
+        <div class="add-icon">
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#d32f2f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="12" y1="5" x2="12" y2="19" />
+            <line x1="5" y1="12" x2="19" y2="12" />
+          </svg>
+        </div>
+        <p>Adicionar Agendamento</p>
+      `;
+      cardAdd.onclick = () => adicionarAgendamentoExtra(dataStr);
+      container.appendChild(cardAdd);
+
+      // Atualizar estado das setas
+      document.getElementById("setaEsquerda").disabled = currentIndex === 0;
+      document.getElementById("setaDireita").disabled = currentIndex === diasData.length - 1;
+    }
+
+    function abrirModal(data, horario, nome) {
+      if (nome === "Folga") return;
+      agendamentoAtual = { data, horario, nome };
+      document.getElementById("valorPago").value = "";
+      document.getElementById("modalPagamento").style.display = "flex";
+    }
+
+    function fecharModal() {
+      document.getElementById("modalPagamento").style.display = "none";
+    }
+
+    document.getElementById("confirmarPagamento").addEventListener("click", async () => {
+      const valor = parseFloat(document.getElementById("valorPago").value);
+      if (isNaN(valor) || valor <= 0) {
+        alert("Digite um valor válido.");
+        return;
+      }
+
+      const { data, horario, nome } = agendamentoAtual;
+      // Usar data/hora de Manaus para o registro
+      const dataRegistro = converterParaManaus(new Date());
+
+      try {
+        await db.collection("agendamentos").doc(data)
+          .collection("pagamentos").add({ nome, valor, dataRegistro });
+
+        await db.collection("agendamentos").doc(data)
+          .collection("horarios").doc(horario).delete();
+
+        // Recarregar dados
+        await recarregarDadosAtuais();
+        
+        fecharModal();
+        alert("Agendamento concluído com sucesso!");
+      } catch (e) {
+        console.error("Erro ao registrar pagamento:", e);
+        alert("Erro ao concluir agendamento.");
+      }
+    });
+
+    function abrirModalEditar(data, horario, nome, quantidade) {
+      if (nome === "Folga") return;
+      editarAgendamentoAtual = { data, horario };
+      document.getElementById("editarNome").value = nome;
+      document.getElementById("editarQuantidade").value = quantidade;
+      document.getElementById("modalEditarAgendamento").style.display = "flex";
+    }
+
+    function fecharModalEditarAgendamento() {
+      document.getElementById("modalEditarAgendamento").style.display = "none";
+    }
+
+    document.getElementById("confirmarEditarAgendamento").addEventListener("click", async () => {
+      const nome = document.getElementById("editarNome").value.trim();
+      const quantidade = parseInt(document.getElementById("editarQuantidade").value);
+
+      if (!nome || (nome !== "Folga" && (isNaN(quantidade) || quantidade <= 0))) {
+        alert("Preencha corretamente os campos.");
+        return;
+      }
+
+      const { data, horario } = editarAgendamentoAtual;
+      const agendamentoAtualizado = {
+        nome,
+        quantidade: nome === "Folga" ? 0 : quantidade,
+        contato: "—",
+        local: "—"
+      };
+
+      try {
+        await db.collection("agendamentos").doc(data)
+          .collection("horarios").doc(horario).set(agendamentoAtualizado);
+        
+        // Recarregar dados
+        await recarregarDadosAtuais();
+        
+        fecharModalEditarAgendamento();
+        alert("Agendamento atualizado com sucesso!");
+      } catch (e) {
+        console.error("Erro ao editar agendamento:", e);
+        alert("Erro ao salvar alterações.");
+      }
+    }); 
+    async function excluirAgendamento(data, horario) {
+      if (!confirm("Tem certeza que deseja excluir este agendamento?")) return;
+      try {
+        await db.collection("agendamentos").doc(data)
+          .collection("horarios").doc(horario).delete();
+        
+        // Recarregar dados
+        await recarregarDadosAtuais();
+        
+        alert("Agendamento excluído com sucesso!");
+      } catch (e) {
+        console.error("Erro ao excluir agendamento:", e);
+        alert("Erro ao excluir agendamento.");
+      }
+    }
+
+    function adicionarAgendamentoExtra(dataStr) {
+      dataParaNovoAgendamento = dataStr;
+      document.getElementById("novoNome").value = "";
+      document.getElementById("novaQuantidade").value = "";
+      document.getElementById("modalNovoAgendamento").style.display = "flex";
+    }
+
+    function fecharModalNovoAgendamento() {
+      document.getElementById("modalNovoAgendamento").style.display = "none";
+    }
+
+    document.getElementById("confirmarNovoAgendamento").addEventListener("click", async () => {
+      const nome = document.getElementById("novoNome").value.trim();
+      const quantidade = parseInt(document.getElementById("novaQuantidade").value);
+
+      if (!nome || (nome !== "Folga" && (isNaN(quantidade) || quantidade <= 0))) {
+        alert("Preencha corretamente os campos.");
+        return;
+      }
+
+      const horarioId = `${Date.now()}`;
+      const novoAgendamento = {
+        nome,
+        quantidade: nome === "Folga" ? 0 : quantidade,
+        contato: "—",
+        local: "—"
+      };
+
+      try {
+        await db.collection("agendamentos").doc(dataParaNovoAgendamento)
+          .collection("horarios").doc(horarioId).set(novoAgendamento);
+
+        // Recarregar dados
+        await recarregarDadosAtuais();
+        
+        fecharModalNovoAgendamento();
+        alert("Agendamento adicionado com sucesso!");
+      } catch (e) {
+        console.error("Erro ao adicionar agendamento extra:", e);
+        alert("Erro ao salvar agendamento.");
+      }
+    });
+
+    function abrirModalSelecionarData() {
+      // Usar data atual de Manaus como padrão
+      const hojeManaus = getDataManaus();
+      const hojeStr = hojeManaus.toISOString().split("T")[0];
+      document.getElementById("dataAgendamento").value = hojeStr;
+      document.getElementById("modalSelecionarData").style.display = "flex";
+    }
+
+    function fecharModalSelecionarData() {
+      document.getElementById("modalSelecionarData").style.display = "none";
+    }
+
+    document.getElementById("confirmarData").addEventListener("click", () => {
+      const dataSelecionada = document.getElementById("dataAgendamento").value;
+      if (!dataSelecionada) {
+        alert("Por favor, selecione uma data.");
+        return;
+      }
+      fecharModalSelecionarData();
+      adicionarAgendamentoExtra(dataSelecionada);
+    });
+
+    // Função para recarregar os dados atuais após modificações
+    async function recarregarDadosAtuais() {
+      const dataAtual = diasData[currentIndex];
+      
+      try {
+        // Recarregar apenas os dados do dia atual
+        const horariosSnapshot = await db.collection("agendamentos")
+          .doc(dataAtual)
+          .collection("horarios")
+          .get();
+        
+        // Atualizar cache
+        window.agendamentosCache[dataAtual] = horariosSnapshot;
+        
+        // Atualizar exibição
+        exibirDiaAtual();
+      } catch (error) {
+        console.error("Erro ao recarregar dados:", error);
+        // Em caso de erro, recarregar tudo
+        carregarAgendamentos();
+      }
+    }
+
+    // Inicializar a aplicação
+    carregarAgendamentos();
+  </script>
+  <script>
+  // Registrar Service Worker
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', function() {
+      navigator.serviceWorker.register('sw.js')
+        .then(function(registration) {
+          console.log('Service Worker registrado com sucesso:', registration.scope);
+          
+          // Verificar se há uma nova versão disponível
+          registration.addEventListener('updatefound', () => {
+            const newWorker = registration.installing;
+            console.log('Nova versão do Service Worker encontrada!');
+            
+            newWorker.addEventListener('statechange', () => {
+              if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                console.log('Nova versão pronta! Recarregando...');
+                window.location.reload();
+              }
+            });
+          });
+        })
+        .catch(function(error) {
+          console.log('Falha no registro do Service Worker:', error);
+        });
+    });
+
+    // Ouvir mensagens do Service Worker
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      console.log('Controller changed - reloading page');
+      window.location.reload();
+    });
+  }
+
+  // Detectar se está em modo standalone (PWA)
+  function isRunningStandalone() {
+    return (window.matchMedia('(display-mode: standalone)').matches) || 
+           (window.navigator.standalone) || 
+           (document.referrer.includes('android-app://'));
+  }
+
+  // Aplicar estilos específicos para PWA se necessário
+  if (isRunningStandalone()) {
+    document.documentElement.classList.add('pwa-mode');
+  }
+</script>
+</body>
+</html>

@@ -1,0 +1,909 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Agendamento</title>
+  <link rel="icon" type="image/png" href="favicon.ico">
+
+  <!-- Embedded CSS -->
+  <style>
+    * {            
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background: linear-gradient(135deg, #fff5f5 0%, #fff0f0 50%, #ffe6e6 100%);
+      color: #7c2d2d;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      min-height: 100vh;
+      padding: 20px;
+      position: relative;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-image: 
+        radial-gradient(circle at 20% 80%, rgba(255, 215, 0, 0.1) 0%, transparent 50%),
+        radial-gradient(circle at 80% 20%, rgba(255, 87, 87, 0.1) 0%, transparent 50%),
+        radial-gradient(circle at 40% 40%, rgba(255, 193, 7, 0.05) 0%, transparent 50%);
+      pointer-events: none;
+      z-index: -1;
+    }
+
+    .app-container {
+      max-width: 700px;
+      margin: 0 auto;
+    }
+
+    .profile-section {
+      text-align: center;
+      margin-bottom: 30px;
+      padding-top: 20px;
+    }
+
+    .profile-image {
+      width: 130px;
+      height: 130px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 4px solid #ffd700;
+      box-shadow: 0 6px 20px rgba(255, 87, 87, 0.3);
+      margin: 0 auto 15px;
+      display: block;
+      background: linear-gradient(135deg, #ffd700 0%, #ffec8b 100%);
+      padding: 5px;
+    }
+
+    h1 {
+      font-size: 1.9rem;
+      margin-bottom: 8px;
+      font-weight: 600;
+      color: #b33c3c;
+      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    .subtitle {
+      color: #d46a6a;
+      font-size: 1.05rem;
+      margin-bottom: 25px;
+      font-weight: 500;
+    }
+
+    .section {
+      background: rgba(255, 255, 255, 0.7);
+      backdrop-filter: blur(12px);
+      border-radius: 20px;
+      padding: 22px;
+      margin-bottom: 22px;
+      border: 1px solid rgba(255, 215, 0, 0.3);
+      box-shadow: 0 8px 25px rgba(255, 87, 87, 0.15);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .section::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 4px;
+      background: linear-gradient(90deg, #ffd700 0%, #ff6b6b 50%, #ffd700 100%);
+    }
+
+    h3 {
+      margin-bottom: 18px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      color: #b33c3c;
+      font-size: 1.2rem;
+    }
+
+    h3::before {
+      content: "";
+      display: inline-block;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #ffd700 0%, #ff6b6b 100%);
+      margin-right: 12px;
+      box-shadow: 0 2px 4px rgba(179, 60, 60, 0.3);
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    .calendar {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 10px;
+      margin-top: 15px;
+    }
+
+    .calendar div {
+      text-align: center;
+      padding: 14px 5px;
+      border-radius: 14px;
+      font-weight: 500;
+      user-select: none;
+      transition: all 0.3s ease;
+      border: 2px solid transparent;
+    }
+
+    .calendar .weekday {
+      border: none;
+      background-color: transparent;
+      color: #b33c3c;
+      font-weight: 600;
+      text-transform: uppercase;
+      cursor: default;
+      font-size: 0.9rem;
+    }
+
+    .calendar .day {
+      border: 2px solid rgba(255, 215, 0, 0.5);
+      background-color: rgba(255, 255, 255, 0.8);
+      color: #7c2d2d;
+      cursor: pointer;
+    }
+
+    .calendar .day:hover:not(.disabled):not(.selected) {
+      background-color: rgba(255, 215, 0, 0.2);
+      transform: translateY(-3px);
+      box-shadow: 0 6px 12px rgba(255, 87, 87, 0.2);
+    }
+
+    .calendar .selected {
+      background: linear-gradient(135deg, #ff6b6b 0%, #ff8e8e 100%);
+      color: white;
+      border-color: #ff6b6b;
+      box-shadow: 0 6px 15px rgba(255, 107, 107, 0.4);
+      transform: translateY(-2px);
+    }
+
+    .calendar .disabled {
+      background-color: rgba(255, 255, 255, 0.4);
+      color: #d4a7a7;
+      cursor: not-allowed;
+      border-color: rgba(255, 215, 0, 0.2);
+    }
+
+    #horarios {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      justify-content: center;
+    }
+
+    #horarios button {
+      padding: 14px 22px;
+      border: none;
+      border-radius: 14px;
+      background: rgba(255, 255, 255, 0.8);
+      color: #7c2d2d;
+      font-size: 1em;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      flex: 1;
+      min-width: 110px;
+      border: 2px solid rgba(255, 215, 0, 0.5);
+      font-weight: 500;
+    }
+
+    #horarios button:hover:not(.disabled) {
+      background: rgba(255, 215, 0, 0.2);
+      transform: translateY(-3px);
+      box-shadow: 0 6px 12px rgba(255, 87, 87, 0.2);
+    }
+
+    #horarios button.selected {
+      background: linear-gradient(135deg, #ff6b6b 0%, #ff8e8e 100%);
+      color: white;
+      border-color: #ff6b6b;
+      box-shadow: 0 6px 15px rgba(255, 107, 107, 0.4);
+    }
+
+    #horarios button.disabled {
+      background-color: rgba(255, 255, 255, 0.4);
+      color: #d4a7a7;
+      cursor: not-allowed;
+      border-color: rgba(255, 215, 0, 0.2);
+    }
+
+    input[type="text"],
+    input[type="tel"],
+    input[type="number"] {
+      width: 100%;
+      padding: 16px;
+      margin: 10px 0 18px 0;
+      border: 2px solid rgba(255, 215, 0, 0.5);
+      border-radius: 14px;
+      font-size: 1em;
+      background-color: rgba(255, 255, 255, 0.9);
+      color: #7c2d2d;
+      transition: all 0.3s ease;
+    }
+
+    input:focus {
+      outline: none;
+      border-color: #ff6b6b;
+      background-color: white;
+      box-shadow: 0 4px 12px rgba(255, 107, 107, 0.2);
+    }
+
+    input::placeholder {
+      color: #d4a7a7;
+    }
+
+    .button-link {
+      display: block;
+      width: 100%;
+      margin-top: 22px;
+      text-align: center;
+      background: linear-gradient(135deg, #ff6b6b 0%, #ff8e8e 100%);
+      color: white;
+      padding: 18px;
+      text-decoration: none;
+      border-radius: 14px;
+      font-weight: 600;
+      font-size: 1.1em;
+      transition: all 0.3s ease;
+      cursor: pointer;
+      border: none;
+      box-shadow: 0 6px 15px rgba(255, 107, 107, 0.4);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .button-link::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+      transition: left 0.5s;
+    }
+
+    .button-link:hover::before {
+      left: 100%;
+    }
+
+    .button-link:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 8px 20px rgba(255, 107, 107, 0.5);
+    }
+
+    .button-cancel {
+      background: linear-gradient(135deg, #ffd700 0%, #ffec8b 100%);
+      color: #b33c3c;
+      box-shadow: 0 6px 15px rgba(255, 215, 0, 0.4);
+    }
+
+    .button-cancel:hover {
+      box-shadow: 0 8px 20px rgba(255, 215, 0, 0.5);
+    }
+
+    label {
+      display: block;
+      font-weight: 600;
+      margin-top: 12px;
+      color: #b33c3c;
+    }
+
+    .inline-label {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 10px;
+    }
+
+    .value-warning {
+      font-size: 0.9em;
+      color: #ff6b6b;
+      margin-top: -12px;
+      margin-bottom: 14px;
+      font-weight: 500;
+    }
+
+    .modal {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(124, 45, 45, 0.8);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      padding: 20px;
+      backdrop-filter: blur(8px);
+    }
+
+    .modal.hidden {
+      display: none;
+    }
+
+    .modal-content {
+      background: linear-gradient(135deg, #fff5f5 0%, #ffe6e6 100%);
+      padding: 28px;
+      border-radius: 20px;
+      max-width: 500px;
+      text-align: center;
+      color: #7c2d2d;
+      width: 100%;
+      max-height: 80vh;
+      overflow-y: auto;
+      border: 2px solid #ffd700;
+      box-shadow: 0 15px 35px rgba(179, 60, 60, 0.3);
+      position: relative;
+    }
+
+    .modal-content::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 4px;
+      background: linear-gradient(90deg, #ffd700 0%, #ff6b6b 50%, #ffd700 100%);
+    }
+
+    .modal-buttons {
+      display: flex;
+      justify-content: center;
+      margin-top: 22px;
+      gap: 12px;
+    }
+
+    .modal-buttons button {
+      padding: 14px 26px;
+      font-size: 16px;
+      cursor: pointer;
+      border: none;
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.8);
+      color: #7c2d2d;
+      transition: all 0.3s ease;
+      flex: 1;
+      border: 2px solid rgba(255, 215, 0, 0.5);
+      font-weight: 600;
+    }
+
+    .modal-buttons button:first-child {
+      background: linear-gradient(135deg, #ff6b6b 0%, #ff8e8e 100%);
+      color: white;
+      border-color: #ff6b6b;
+    }
+
+    .modal-buttons button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(255, 87, 87, 0.3);
+    }
+
+    .agendamento-item {
+      background: rgba(255, 255, 255, 0.8);
+      padding: 20px;
+      margin: 14px 0;
+      border-radius: 14px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      border: 2px solid rgba(255, 215, 0, 0.5);
+      text-align: left;
+    }
+
+    .agendamento-item:hover {
+      background: rgba(255, 215, 0, 0.15);
+      transform: translateY(-3px);
+      box-shadow: 0 6px 12px rgba(255, 87, 87, 0.2);
+    }
+
+    .agendamento-item.selected {
+      background: linear-gradient(135deg, #ff6b6b 0%, #ff8e8e 100%);
+      color: white;
+      border-color: #ff6b6b;
+    }
+
+    .floral-decoration {
+      position: fixed;
+      opacity: 0.1;
+      z-index: -1;
+    }
+
+    .floral-1 {
+      top: 10%;
+      left: 5%;
+      font-size: 120px;
+      transform: rotate(-15deg);
+    }
+
+    .floral-2 {
+      bottom: 10%;
+      right: 5%;
+      font-size: 100px;
+      transform: rotate(15deg);
+    }
+
+    @media (max-width: 600px) {
+      body {
+        padding: 15px;
+      }
+      
+      .profile-image {
+        width: 110px;
+        height: 110px;
+      }
+      
+      h1 {
+        font-size: 1.7rem;
+      }
+      
+      .section {
+        padding: 18px;
+      }
+
+      .calendar {
+        grid-template-columns: repeat(7, 1fr);
+        gap: 8px;
+      }
+
+      .calendar div {
+        padding: 12px 3px;
+        font-size: 0.9rem;
+      }
+
+      #horarios {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+      }
+
+      #horarios button {
+        padding: 14px 10px;
+        font-size: 16px;
+        border-radius: 12px;
+      }
+
+      .modal-content {
+        padding: 22px;
+      }
+      
+      .modal-buttons {
+        flex-direction: column;
+      }
+      
+      .floral-decoration {
+        display: none;
+      }
+    }
+  </style>
+
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/9.6.11/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.11/firebase-firestore-compat.js"></script>
+  <!-- Luxon for timezone handling -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/luxon/3.4.4/luxon.min.js"></script>
+</head>
+<body>
+  <!-- Decorações florais sutis -->
+  <div class="floral-decoration floral-1">🌸</div>
+  <div class="floral-decoration floral-2">🌺</div>
+  
+  <div class="app-container">
+    <div class="profile-section">
+      <img src="favicon.ico" alt="Perfil" class="profile-image">
+      <h1>Agendamento de Amolação</h1>
+      <div class="subtitle">Agende seu horário com praticidade</div>
+    </div>
+
+    <div class="section">
+      <h3>1️⃣ Escolha o dia (3 semanas):</h3>
+      <div class="calendar" id="calendario"></div>
+    </div>
+
+    <div class="section hidden" id="horariosSection">
+      <h3>2️⃣ Escolha o horário:</h3>
+      <div id="horarios"></div>
+    </div>
+
+    <div class="section hidden" id="formSection">
+      <h3>3️⃣ Detalhes do agendamento:</h3>
+
+      <div class="inline-label">
+        <label>Quantidade de alicates:</label>
+        <span id="alicatesTexto"></span>
+      </div>
+      <input type="number" id="quantidade" min="5" maxlength="3" oninput="atualizarQuantidadeTexto()" />
+      <div id="qntLabel" class="value-warning">Por logística, o valor mínimo é de R$ 50,00.</div>
+
+      <label>Nome completo:</label>
+      <input type="text" id="nome" required />
+
+      <label>Contato (WhatsApp):</label>
+      <input type="number" id="contato" placeholder="Ex: 11987654321" maxlength="11" required />
+
+      <label>Localização:</label>
+      <input type="text" id="localizacao" placeholder="Digite sua localização" required />
+
+      <button class="button-link" onclick="concluirAgendamento()">✅ Concluir Agendamento</button>
+    </div>
+
+    <div class="section hidden" id="cancelamentoSection">
+      <button class="button-link button-cancel" onclick="mostrarModalCancelamento()">❌ Cancelar Agendamento</button>
+    </div>
+  </div>
+
+  <!-- Modal para cancelamento -->
+  <div id="modalCancelamento" class="modal hidden">
+    <div class="modal-content">
+      <h3>Cancelar Agendamento</h3>
+      <p>Selecione o agendamento que deseja cancelar:</p>
+      <div id="listaAgendamentos"></div>
+      <div class="modal-buttons">
+        <button onclick="solicitarCancelamento()">Solicitar Cancelamento</button>
+        <button onclick="fecharModalCancelamento()">Fechar</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyBP3rhyHOKpCTt6PKQdjgVtprUmoLy09wg",
+      authDomain: "d-amolador.firebaseapp.com",
+      projectId: "d-amolador",
+      storageBucket: "d-amolador.firebasestorage.app",
+      messagingSenderId: "882919276636",
+      appId: "1:882919276636:web:5f8c8ad014f30b0a5c6699"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
+    const { DateTime } = luxon;
+    const horariosFixos = ["09:00", "11:00", "13:00", "15:00"];
+    const hoje = DateTime.now().setZone("America/Manaus").startOf("day");
+
+    let diaSelecionado = null;
+    let dataSelecionada = null;
+    let botaoHorarioAtivo = null;
+    let horarioSelecionado = "";
+    let horariosOcupados = {};
+    let agendamentoSelecionadoCancelamento = null;
+
+    // Carregar dados salvos do localStorage
+    function carregarDadosSalvos() {
+      const dadosSalvos = localStorage.getItem('dadosAgendamento');
+      if (dadosSalvos) {
+        const dados = JSON.parse(dadosSalvos);
+        document.getElementById('nome').value = dados.nome || '';
+        document.getElementById('contato').value = dados.contato || '';
+        document.getElementById('localizacao').value = dados.localizacao || '';
+      }
+    }
+
+    // Salvar dados no localStorage
+    function salvarDados() {
+      const dados = {
+        nome: document.getElementById('nome').value,
+        contato: document.getElementById('contato').value,
+        localizacao: document.getElementById('localizacao').value
+      };
+      localStorage.setItem('dadosAgendamento', JSON.stringify(dados));
+    }
+
+    // Salvar agendamento no localStorage
+    function salvarAgendamentoNoLocalStorage(agendamento) {
+      const agendamentos = obterAgendamentosDoLocalStorage();
+      agendamentos.push(agendamento);
+      localStorage.setItem('agendamentos', JSON.stringify(agendamentos));
+      verificarExibirBotaoCancelamento();
+    }
+
+    // Obter agendamentos do localStorage
+    function obterAgendamentosDoLocalStorage() {
+      const agendamentos = localStorage.getItem('agendamentos');
+      return agendamentos ? JSON.parse(agendamentos) : [];
+    }
+
+    // Remover agendamento do localStorage
+    function removerAgendamentoDoLocalStorage(data, horario) {
+      const agendamentos = obterAgendamentosDoLocalStorage();
+      const novosAgendamentos = agendamentos.filter(ag => 
+        !(ag.data === data && ag.horario === horario)
+      );
+      localStorage.setItem('agendamentos', JSON.stringify(novosAgendamentos));
+      verificarExibirBotaoCancelamento();
+    }
+
+    // Verificar se deve exibir o botão de cancelamento
+    function verificarExibirBotaoCancelamento() {
+      const agendamentos = obterAgendamentosDoLocalStorage();
+      const cancelamentoSection = document.getElementById('cancelamentoSection');
+      
+      if (agendamentos.length > 0) {
+        cancelamentoSection.classList.remove('hidden');
+      } else {
+        cancelamentoSection.classList.add('hidden');
+      }
+    }
+
+    async function carregarAgendamentos() {
+      const snapshot = await db.collection("agendamentos").get();
+      snapshot.forEach(doc => {
+        horariosOcupados[doc.id] = doc.data().horarios || [];
+      });
+      criarCalendario();
+      carregarDadosSalvos();
+      verificarExibirBotaoCancelamento();
+    }
+
+    function criarCalendario() {
+      const calendario = document.getElementById("calendario");
+      calendario.innerHTML = "";
+      const nomesDias = ["D", "S", "T", "Q", "Q", "S", "S"];
+      nomesDias.forEach(dia => {
+        const div = document.createElement("div");
+        div.textContent = dia;
+        div.classList.add("weekday");
+        calendario.appendChild(div);
+      });
+
+      const agora = DateTime.now().setZone("America/Manaus");
+      const primeiroDomingo = hoje.minus({ days: hoje.weekday % 7 });
+
+      for (let semana = 0; semana < 3; semana++) {
+        for (let dia = 0; dia < 7; dia++) {
+          const data = primeiroDomingo.plus({ days: semana * 7 + dia });
+          const dataStr = data.toISODate();
+          const diaSemana = data.weekday % 7;
+          const div = document.createElement("div");
+          div.classList.add("day");
+          div.innerText = data.day;
+
+          // Check if all time slots are unavailable
+          let todosOcupados = true;
+          horariosFixos.forEach(horario => {
+            const [hora, minuto] = horario.split(":").map(Number);
+            const horarioDt = data.set({ hour: hora, minute: minuto });
+            const ocupado = horariosOcupados[dataStr]?.includes(horario);
+            const dentro12h = horarioDt <= agora.plus({ hours: 12 });
+            const antesAgora = data.hasSame(agora, "day") && horarioDt <= agora;
+            if (!ocupado && !dentro12h && !antesAgora) {
+              todosOcupados = false; // At least one slot is available
+            }
+          });
+
+          const isPassado = data < hoje;
+
+          if (diaSemana === 0 || diaSemana === 1 || isPassado || todosOcupados) {
+            div.classList.add("disabled");
+          } else {
+            div.onclick = () => {
+              diaSelecionado = data.toLocaleString({ weekday: "long", locale: "pt-BR" });
+              diaSelecionado = diaSelecionado.charAt(0).toUpperCase() + diaSelecionado.slice(1);
+              dataSelecionada = dataStr;
+
+              document.querySelectorAll(".calendar .day").forEach(d => d.classList.remove("selected"));
+              div.classList.add("selected");
+
+              mostrarHorarios();
+            };
+          }
+
+          calendario.appendChild(div);
+        }
+      }
+    }
+
+    function mostrarHorarios() {
+      const sec = document.getElementById("horariosSection");
+      const container = document.getElementById("horarios");
+      container.innerHTML = "";
+      sec.classList.remove("hidden");
+      document.getElementById("formSection").classList.add("hidden");
+
+      botaoHorarioAtivo = null;
+      horarioSelecionado = "";
+
+      const agora = DateTime.now().setZone("America/Manaus");
+      const dataSelecionadaDt = DateTime.fromISO(dataSelecionada, { zone: "America/Manaus" });
+
+      horariosFixos.forEach(horario => {
+        const [hora, minuto] = horario.split(":").map(Number);
+        const horarioDt = dataSelecionadaDt.set({ hour: hora, minute: minuto });
+        const ocupado = horariosOcupados[dataSelecionada]?.includes(horario);
+        const dentro12h = horarioDt <= agora.plus({ hours: 12 });
+        const antesAgora = dataSelecionadaDt.hasSame(agora, "day") && horarioDt <= agora;
+
+        const btn = document.createElement("button");
+        btn.innerText = horario;
+        if (ocupado || dentro12h || antesAgora) {
+          btn.className = "disabled";
+          btn.disabled = true;
+        } else {
+          btn.onclick = () => selecionarHorario(horario, btn);
+        }
+        container.appendChild(btn);
+      });
+    }
+
+    function selecionarHorario(horario, btn) {
+      if (horarioSelecionado === horario) {
+        horarioSelecionado = "";
+        document.getElementById("formSection").classList.add("hidden");
+        if (botaoHorarioAtivo) botaoHorarioAtivo.classList.remove("selected");
+        return;
+      }
+
+      horarioSelecionado = horario;
+      document.getElementById("formSection").classList.remove("hidden");
+
+      if (botaoHorarioAtivo) botaoHorarioAtivo.classList.remove("selected");
+      botaoHorarioAtivo = btn;
+      botaoHorarioAtivo.classList.add("selected");
+    }
+
+    function atualizarQuantidadeTexto() {
+      const input = document.getElementById("quantidade");
+      if (input.value.length > 3) input.value = input.value.slice(0, 3);
+      const textoQtd = document.getElementById("alicatesTexto");
+      const valor = input.value;
+      textoQtd.textContent = valor ? `${valor} Alicates` : "";
+    }
+
+    async function concluirAgendamento() {
+      const qnt = parseInt(document.getElementById("quantidade").value);
+      const nome = document.getElementById("nome").value.trim();
+      const contato = document.getElementById("contato").value.trim();
+      const local = document.getElementById("localizacao").value.trim();
+
+      if (!qnt || qnt < 5 || !nome || !contato || !local || !dataSelecionada || !horarioSelecionado) {
+        alert("Por favor, preencha todos os campos corretamente.\nMínimo de 5 alicates.");
+        return;
+      }
+
+      try {
+        // Salvar dados para uso futuro
+        salvarDados();
+
+        await db.collection("agendamentos").doc(dataSelecionada).set({
+          horarios: firebase.firestore.FieldValue.arrayUnion(horarioSelecionado)
+        }, { merge: true });
+
+        await db.collection("agendamentos")
+          .doc(dataSelecionada)
+          .collection("horarios")
+          .doc(horarioSelecionado)
+          .set({
+            nome,
+            contato,
+            local,
+            quantidade: qnt,
+            timestamp: firebase.firestore.FieldValue.serverTimestamp()
+          });
+
+        // Salvar agendamento no localStorage
+        const agendamento = {
+          data: dataSelecionada,
+          horario: horarioSelecionado,
+          nome,
+          contato,
+          local,
+          quantidade: qnt
+        };
+        salvarAgendamentoNoLocalStorage(agendamento);
+
+        const linkMaps = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(local)}`;
+        const mensagem = 
+          `Olá! Gostaria de confirmar meu agendamento:\n\n` +
+          `● *Dia:* ${diaSelecionado}, ${dataSelecionada}\n` +
+          `● *Horário:* ${horarioSelecionado}\n` +
+          `● *Alicates:* ${qnt}\n` +
+          `● *Nome:* ${nome}\n` +
+          `● *Contato:* ${contato}\n` +
+          `● *Localização:* ${local}\n\n` +
+          `● *Ver no mapa:* ${linkMaps}`;
+        const link = `https://wa.me/5592984230299?text=${encodeURIComponent(mensagem)}`;
+
+        window.open(link, "_blank");
+        setTimeout(() => {
+          location.reload();
+        }, 3000);
+
+      } catch (erro) {
+        console.error("Erro ao salvar agendamento:", erro);
+        alert("❌ Ocorreu um erro ao salvar o agendamento. Tente novamente.");
+      }
+    }
+
+    // Funções para cancelamento
+    function mostrarModalCancelamento() {
+      const modal = document.getElementById('modalCancelamento');
+      const lista = document.getElementById('listaAgendamentos');
+      
+      // Limpar lista
+      lista.innerHTML = '';
+      
+      // Obter agendamentos do localStorage
+      const agendamentos = obterAgendamentosDoLocalStorage();
+      
+      if (agendamentos.length === 0) {
+        lista.innerHTML = '<p>Nenhum agendamento encontrado.</p>';
+      } else {
+        agendamentos.forEach((agendamento, index) => {
+          const item = document.createElement('div');
+          item.className = 'agendamento-item';
+          item.innerHTML = `
+            <strong>${agendamento.nome}</strong><br>
+            Data: ${agendamento.data} | Horário: ${agendamento.horario}<br>
+            Alicates: ${agendamento.quantidade}
+          `;
+          item.onclick = () => selecionarAgendamentoCancelamento(index, item);
+          lista.appendChild(item);
+        });
+      }
+      
+      modal.classList.remove('hidden');
+      agendamentoSelecionadoCancelamento = null;
+    }
+
+    function fecharModalCancelamento() {
+      document.getElementById('modalCancelamento').classList.add('hidden');
+    }
+
+    function selecionarAgendamentoCancelamento(index, elemento) {
+      // Remover seleção anterior
+      document.querySelectorAll('.agendamento-item').forEach(item => {
+        item.classList.remove('selected');
+      });
+      
+      // Adicionar seleção atual
+      elemento.classList.add('selected');
+      
+      // Obter agendamentos e selecionar o correto
+      const agendamentos = obterAgendamentosDoLocalStorage();
+      agendamentoSelecionadoCancelamento = agendamentos[index];
+    }
+
+    function solicitarCancelamento() {
+      if (!agendamentoSelecionadoCancelamento) {
+        alert('Por favor, selecione um agendamento para cancelar.');
+        return;
+      }
+      
+      const agendamento = agendamentoSelecionadoCancelamento;
+      const mensagem = 
+        `Olá! Gostaria de solicitar o cancelamento do seguinte agendamento:\n\n` +
+        `● *Dia:* ${agendamento.data}\n` +
+        `● *Horário:* ${agendamento.horario}\n` +
+        `● *Alicates:* ${agendamento.quantidade}\n` +
+        `● *Nome:* ${agendamento.nome}\n` +
+        `● *Contato:* ${agendamento.contato}\n` +
+        `● *Localização:* ${agendamento.local}\n\n` +
+        `Por favor, confirme o cancelamento.`;
+        
+      const link = `https://wa.me/5592984230299?text=${encodeURIComponent(mensagem)}`;
+      
+      // Remover do localStorage
+      removerAgendamentoDoLocalStorage(agendamento.data, agendamento.horario);
+      
+      // Abrir WhatsApp
+      window.open(link, "_blank");
+      
+      // Fechar modal
+      fecharModalCancelamento();
+    }
+
+    carregarAgendamentos();
+  </script>
+</body>
+</html>

@@ -1,0 +1,735 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Agendamentos</title>
+  <link rel="icon" type="image/png" href="favicon.png">
+  <script src="https://www.gstatic.com/firebasejs/9.6.11/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.11/firebase-firestore-compat.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    :root {
+      --primary: #d32f2f;
+      --primary-dark: #b71c1c;
+      --secondary: #ffd600;
+      --accent: #ff6d00;
+      --light: #f5f5f5;
+      --dark: #212121;
+      --gray: #757575;
+      --gray-light: #e0e0e0;
+      --border-radius: 12px;
+      --shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+      --shadow-hover: 0 4px 20px rgba(0, 0, 0, 0.15);
+      --transition: all 0.3s ease;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      background: linear-gradient(135deg, #d32f2f 0%, #ff6d00 100%);
+      min-height: 100vh;
+      padding: 0;
+      color: var(--dark);
+      line-height: 1.4;
+    }
+
+    .app-container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 15px;
+    }
+
+    .app-header {
+      text-align: center;
+      margin-bottom: 20px;
+      padding: 15px 0;
+    }
+
+    .app-title {
+      color: white;
+      font-size: 1.8rem;
+      font-weight: 700;
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      background: rgba(255, 255, 255, 0.15);
+      padding: 12px 25px;
+      border-radius: 50px;
+      backdrop-filter: blur(10px);
+    }
+
+    .stats-container {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+
+    .stat-card {
+      background: white;
+      border-radius: var(--border-radius);
+      padding: 15px;
+      box-shadow: var(--shadow);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      transition: var(--transition);
+    }
+
+    .stat-card:hover {
+      transform: translateY(-3px);
+      box-shadow: var(--shadow-hover);
+    }
+
+    .stat-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 10px;
+      font-size: 1.2rem;
+    }
+
+    .stat-icon.primary {
+      background: rgba(211, 47, 47, 0.1);
+      color: var(--primary);
+    }
+
+    .stat-icon.secondary {
+      background: rgba(255, 214, 0, 0.1);
+      color: var(--secondary);
+    }
+
+    .stat-icon.accent {
+      background: rgba(255, 109, 0, 0.1);
+      color: var(--accent);
+    }
+
+    .stat-value {
+      font-size: 1.4rem;
+      font-weight: 700;
+      margin-bottom: 3px;
+    }
+
+    .stat-label {
+      color: var(--gray);
+      font-size: 0.8rem;
+      font-weight: 500;
+    }
+
+    .content-area {
+      background: white;
+      border-radius: var(--border-radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      margin-bottom: 20px;
+    }
+
+    .content-header {
+      padding: 15px 20px;
+      border-bottom: 1px solid var(--gray-light);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: var(--light);
+    }
+
+    .content-title {
+      font-size: 1.2rem;
+      font-weight: 600;
+      color: var(--dark);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .filter-container {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .filter-group {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .filter-label {
+      font-size: 0.8rem;
+      color: var(--gray);
+      font-weight: 500;
+    }
+
+    .filter-select {
+      padding: 8px 12px;
+      border-radius: 20px;
+      border: 1px solid var(--gray-light);
+      background: white;
+      font-size: 0.8rem;
+      cursor: pointer;
+      transition: var(--transition);
+      min-width: 120px;
+    }
+
+    .filter-select:focus {
+      outline: none;
+      border-color: var(--primary);
+    }
+
+    .cards-container {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 15px;
+      padding: 20px;
+    }
+
+    .data-card {
+      background: white;
+      border-radius: var(--border-radius);
+      padding: 0;
+      box-shadow: var(--shadow);
+      transition: var(--transition);
+      overflow: hidden;
+      border: 1px solid var(--gray-light);
+    }
+
+    .data-card:hover {
+      transform: translateY(-3px);
+      box-shadow: var(--shadow-hover);
+    }
+
+    .data-card.today {
+      border-top: 3px solid var(--secondary);
+    }
+
+    .data-card.folga {
+      background: var(--light);
+    }
+
+    .card-header {
+      padding: 12px 15px;
+      border-bottom: 1px solid var(--gray-light);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .card-date {
+      font-weight: 600;
+      color: var(--dark);
+      font-size: 0.9rem;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .card-badge {
+      background: var(--primary);
+      color: white;
+      padding: 3px 8px;
+      border-radius: 20px;
+      font-size: 0.7rem;
+      font-weight: 600;
+    }
+
+    .card-badge.today {
+      background: var(--secondary);
+      color: var(--dark);
+    }
+
+    .card-body {
+      padding: 15px;
+    }
+
+    .card-row {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 8px;
+      align-items: center;
+    }
+
+    .card-row:last-child {
+      margin-bottom: 0;
+    }
+
+    .field-group {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .field-icon {
+      color: var(--primary);
+      font-size: 0.8rem;
+      width: 16px;
+    }
+
+    .field-label {
+      font-size: 0.75rem;
+      color: var(--gray);
+      font-weight: 500;
+    }
+
+    .field-value {
+      font-size: 0.85rem;
+      font-weight: 500;
+      color: var(--dark);
+    }
+
+    .field-value a {
+      color: var(--primary);
+      text-decoration: none;
+      transition: var(--transition);
+    }
+
+    .field-value a:hover {
+      color: var(--primary-dark);
+      text-decoration: underline;
+    }
+
+    .empty-state {
+      grid-column: 1 / -1;
+      text-align: center;
+      padding: 40px 20px;
+      color: var(--gray);
+    }
+
+    .empty-state i {
+      font-size: 3rem;
+      margin-bottom: 15px;
+      color: var(--gray-light);
+    }
+
+    .empty-state h3 {
+      font-size: 1.2rem;
+      margin-bottom: 8px;
+      color: var(--dark);
+    }
+
+    .loading {
+      grid-column: 1 / -1;
+      text-align: center;
+      padding: 40px 20px;
+    }
+
+    .loading-spinner {
+      border: 3px solid var(--gray-light);
+      border-top: 3px solid var(--primary);
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 15px;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    .footer {
+      text-align: center;
+      padding: 15px;
+      color: rgba(255, 255, 255, 0.8);
+      font-size: 0.8rem;
+    }
+
+    /* Responsive Design */
+    @media (max-width: 768px) {
+      .app-container {
+        padding: 10px;
+      }
+
+      .app-title {
+        font-size: 1.5rem;
+        padding: 10px 20px;
+      }
+
+      .content-header {
+        flex-direction: column;
+        gap: 10px;
+        align-items: flex-start;
+      }
+
+      .filter-container {
+        width: 100%;
+        flex-direction: column;
+        align-items: flex-start;
+      }
+
+      .filter-group {
+        width: 100%;
+        justify-content: space-between;
+      }
+
+      .filter-select {
+        flex: 1;
+      }
+
+      .cards-container {
+        grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+        padding: 15px;
+        gap: 12px;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .stats-container {
+        grid-template-columns: repeat(3, 1fr);
+      }
+
+      .stat-card {
+        padding: 12px 8px;
+      }
+
+      .stat-value {
+        font-size: 1.2rem;
+      }
+
+      .cards-container {
+        grid-template-columns: 1fr;
+      }
+
+      .filter-group {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+
+      .filter-select {
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-container">
+    <header class="app-header">
+      <h1 class="app-title">
+        <i class="fas fa-calendar-alt"></i>
+        Painel de Agendamentos
+      </h1>
+    </header>
+
+    <div class="stats-container">
+      <div class="stat-card">
+        <div class="stat-icon primary">
+          <i class="fas fa-users"></i>
+        </div>
+        <div class="stat-value" id="totalAgendamentos">0</div>
+        <div class="stat-label">Total</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon secondary">
+          <i class="fas fa-calendar-day"></i>
+        </div>
+        <div class="stat-value" id="agendamentosHoje">0</div>
+        <div class="stat-label">Hoje</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon accent">
+          <i class="fas fa-clock"></i>
+        </div>
+        <div class="stat-value" id="proximosAgendamentos">0</div>
+        <div class="stat-label">Próximos 7 Dias</div>
+      </div>
+    </div>
+
+    <div class="content-area">
+      <div class="content-header">
+        <h2 class="content-title">
+          <i class="fas fa-list"></i>
+          Agendamentos
+        </h2>
+        <div class="filter-container">
+          <div class="filter-group">
+            <span class="filter-label">Data:</span>
+            <select class="filter-select" id="dateFilter">
+              <option value="all">Todos</option>
+              <option value="today">Hoje</option>
+              <option value="next7days">Próximos 7 Dias</option>
+            </select>
+          </div>
+          <div class="filter-group">
+            <span class="filter-label">Ordem:</span>
+            <select class="filter-select" id="orderFilter">
+              <option value="az">A → Z</option>
+              <option value="za">Z → A</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div id="agendamentosContainer" class="cards-container">
+        <div class="loading">
+          <div class="loading-spinner"></div>
+          <p>Carregando agendamentos...</p>
+        </div>
+      </div>
+    </div>
+
+   
+  </div>
+
+  <script>
+    // Formatters
+    function formatarDataBrasileira(dataStr) {
+      const partes = dataStr.split("-");
+      if (partes.length === 3) {
+        return `${partes[2]}/${partes[1]}/${partes[0]}`;
+      }
+      return dataStr;
+    }
+
+    function formatarHora(horario) {
+      return horario.replace(':', 'h');
+    }
+
+    // Funções para manipulação de datas com fuso de Manaus (UTC-4)
+    function getTodayManaus() {
+      const now = new Date();
+      // Ajustar para fuso de Manaus (UTC-4)
+      const offset = -4 * 60; // Manaus é UTC-4
+      const localTime = now.getTime() + (now.getTimezoneOffset() * 60000);
+      const manausTime = new Date(localTime + (offset * 60000));
+      return manausTime.toISOString().split('T')[0];
+    }
+
+    function getNext7DaysManaus() {
+      const hoje = getTodayManaus();
+      const seteDiasFrente = new Date();
+      // Ajustar para fuso de Manaus
+      const offset = -4 * 60;
+      const localTime = seteDiasFrente.getTime() + (seteDiasFrente.getTimezoneOffset() * 60000);
+      const seteDiasManaus = new Date(localTime + (offset * 60000));
+      seteDiasManaus.setDate(seteDiasManaus.getDate() + 7);
+      const dataLimite = seteDiasManaus.toISOString().split("T")[0];
+      
+      return {
+        startDate: hoje,
+        endDate: dataLimite
+      };
+    }
+
+    // Firebase Configuration
+    const firebaseConfig = {
+      apiKey: "AIzaSyBP3rhyHOKpCTt6PKQdjgVtprUmoLy09wg",
+      authDomain: "d-amolador.firebaseapp.com",
+      projectId: "d-amolador",
+      storageBucket: "d-amolador.firebasestorage.app",
+      messagingSenderId: "882919276636",
+      appId: "1:882919276636:web:5f8c8ad014f30b0a5c6699"
+    };
+    
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
+    let allAgendamentos = [];
+    let currentDateFilter = 'all';
+    let currentOrder = 'az';
+
+    // Carregar agendamentos
+    async function carregarAgendamentos() {
+      const agendamentosContainer = document.getElementById("agendamentosContainer");
+      agendamentosContainer.innerHTML = `
+        <div class="loading">
+          <div class="loading-spinner"></div>
+          <p>Carregando agendamentos...</p>
+        </div>
+      `;
+
+      try {
+        const querySnapshot = await db.collectionGroup('horarios').get();
+        
+        allAgendamentos = [];
+
+        querySnapshot.forEach(doc => {
+          const pathParts = doc.ref.path.split('/');
+          const dataStr = pathParts[1];
+          
+          const dados = doc.data();
+          allAgendamentos.push({
+            id: doc.id,
+            data: dataStr,
+            horario: doc.id,
+            ...dados,
+            timestamp: new Date(dataStr + 'T' + doc.id)
+          });
+        });
+
+        atualizarEstatisticas();
+        aplicarFiltros();
+        
+      } catch (error) {
+        console.error("Erro ao carregar agendamentos:", error);
+        agendamentosContainer.innerHTML = `
+          <div class="empty-state">
+            <i class="fas fa-exclamation-triangle"></i>
+            <h3>Erro ao carregar agendamentos</h3>
+            <p>Tente recarregar a página</p>
+          </div>
+        `;
+      }
+    }
+
+    // Atualizar estatísticas
+    function atualizarEstatisticas() {
+      const hoje = getTodayManaus();
+      const seteDias = getNext7DaysManaus();
+      
+      const agendamentosHoje = allAgendamentos.filter(a => a.data === hoje && a.nome !== "Folga").length;
+      const proximosAgendamentos = allAgendamentos.filter(a => a.data >= seteDias.startDate && a.data <= seteDias.endDate && a.nome !== "Folga").length;
+      
+      document.getElementById('totalAgendamentos').textContent = allAgendamentos.filter(a => a.nome !== "Folga").length;
+      document.getElementById('agendamentosHoje').textContent = agendamentosHoje;
+      document.getElementById('proximosAgendamentos').textContent = proximosAgendamentos;
+    }
+
+    // Aplicar filtros
+    function aplicarFiltros() {
+      let agendamentosFiltrados = [...allAgendamentos];
+      
+      // Aplicar filtro de data
+      if (currentDateFilter === 'today') {
+        const hoje = getTodayManaus();
+        agendamentosFiltrados = agendamentosFiltrados.filter(a => a.data === hoje);
+      } else if (currentDateFilter === 'next7days') {
+        const seteDias = getNext7DaysManaus();
+        agendamentosFiltrados = agendamentosFiltrados.filter(a => a.data >= seteDias.startDate && a.data <= seteDias.endDate);
+      }
+      
+      // Aplicar ordenação alfabética
+      if (currentOrder === 'az') {
+        agendamentosFiltrados.sort((a, b) => {
+          const nomeA = a.nome?.toUpperCase() || '';
+          const nomeB = b.nome?.toUpperCase() || '';
+          if (nomeA < nomeB) return -1;
+          if (nomeA > nomeB) return 1;
+          return 0;
+        });
+      } else {
+        agendamentosFiltrados.sort((a, b) => {
+          const nomeA = a.nome?.toUpperCase() || '';
+          const nomeB = b.nome?.toUpperCase() || '';
+          if (nomeA > nomeB) return -1;
+          if (nomeA < nomeB) return 1;
+          return 0;
+        });
+      }
+
+      exibirAgendamentos(agendamentosFiltrados);
+    }
+
+    // Exibir agendamentos
+    function exibirAgendamentos(agendamentos) {
+      const agendamentosContainer = document.getElementById("agendamentosContainer");
+      
+      if (agendamentos.length === 0) {
+        agendamentosContainer.innerHTML = `
+          <div class="empty-state">
+            <i class="fas fa-calendar-times"></i>
+            <h3>Nenhum agendamento</h3>
+            <p>Nenhum agendamento encontrado para os filtros selecionados</p>
+          </div>
+        `;
+        return;
+      }
+
+      agendamentosContainer.innerHTML = '';
+
+      const hoje = getTodayManaus();
+
+      agendamentos.forEach(agendamento => {
+        const isToday = agendamento.data === hoje;
+        const card = document.createElement("div");
+        card.className = `data-card ${isToday ? "today" : ""} ${agendamento.nome === "Folga" ? "folga" : ""}`;
+        
+        if (agendamento.nome === "Folga") {
+          card.innerHTML = `
+            <div class="card-header">
+              <div class="card-date">
+                <i class="fas fa-umbrella-beach"></i>
+                Folga - ${formatarDataBrasileira(agendamento.data)}
+              </div>
+              ${isToday ? '<span class="card-badge today">Hoje</span>' : ''}
+            </div>
+            <div class="card-body">
+              <div class="card-row">
+                <span class="field-value">Dia de descanso</span>
+              </div>
+            </div>
+          `;
+        } else {
+          const gpsLink = agendamento.local && agendamento.local !== "—" 
+            ? `<a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(agendamento.local)}" target="_blank">${agendamento.local}</a>`
+            : "—";
+          
+          card.innerHTML = `
+            <div class="card-header">
+              <div class="card-date">
+                <i class="fas fa-calendar-day"></i>
+                ${formatarDataBrasileira(agendamento.data)} - ${formatarHora(agendamento.horario)}
+              </div>
+              ${isToday ? '<span class="card-badge today">Hoje</span>' : ''}
+            </div>
+            <div class="card-body">
+              <div class="card-row">
+                <div class="field-group">
+                  <i class="fas fa-user field-icon"></i>
+                  <span class="field-label">Cliente:</span>
+                </div>
+                <span class="field-value">${agendamento.nome}</span>
+              </div>
+              <div class="card-row">
+                <div class="field-group">
+                  <i class="fas fa-box field-icon"></i>
+                  <span class="field-label">Quantidade:</span>
+                </div>
+                <span class="field-value">${agendamento.quantidade}</span>
+              </div>
+              <div class="card-row">
+                <div class="field-group">
+                  <i class="fas fa-phone field-icon"></i>
+                  <span class="field-label">Contato:</span>
+                </div>
+                <span class="field-value">${agendamento.contato || "—"}</span>
+              </div>
+              <div class="card-row">
+                <div class="field-group">
+                  <i class="fas fa-map-marker-alt field-icon"></i>
+                  <span class="field-label">Local:</span>
+                </div>
+                <span class="field-value">${gpsLink}</span>
+              </div>
+            </div>
+          `;
+        }
+        agendamentosContainer.appendChild(card);
+      });
+    }
+
+    // Event Listeners para filtros
+    document.getElementById('dateFilter').addEventListener('change', (e) => {
+      currentDateFilter = e.target.value;
+      aplicarFiltros();
+    });
+
+    document.getElementById('orderFilter').addEventListener('change', (e) => {
+      currentOrder = e.target.value;
+      aplicarFiltros();
+    });
+
+    // Load data on page load
+    carregarAgendamentos();
+  </script>
+</body>
+</html>

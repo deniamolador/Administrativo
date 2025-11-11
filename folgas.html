@@ -1,0 +1,890 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Painel de Agendamentos e Folgas</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    :root {
+      --primary: #D32F2F;
+      --primary-dark: #B71C1C;
+      --secondary: #FFD600;
+      --secondary-dark: #FFAB00;
+      --light: #F5F5F5;
+      --dark: #212121;
+      --gray: #757575;
+      --success: #4CAF50;
+      --warning: #FF9800;
+      --card-bg: rgba(255, 255, 255, 0.9);
+      --shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+      color: var(--dark);
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 25px;
+      padding: 15px 0;
+      border-bottom: 2px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+    }
+
+    .logo i {
+      font-size: 28px;
+      color: var(--secondary);
+    }
+
+    .logo h1 {
+      color: white;
+      font-size: 24px;
+      font-weight: 600;
+    }
+
+    .main-content {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 25px;
+    }
+
+    @media (max-width: 768px) {
+      .main-content {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .card {
+      background: var(--card-bg);
+      border-radius: 16px;
+      padding: 20px;
+      box-shadow: var(--shadow);
+      transition: transform 0.3s ease;
+    }
+
+    .card:hover {
+      transform: translateY(-5px);
+    }
+
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+      padding-bottom: 15px;
+      border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+    }
+
+    .card-title {
+      font-size: 20px;
+      font-weight: 600;
+      color: var(--primary);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .card-title i {
+      color: var(--secondary);
+    }
+
+    .controls {
+      display: flex;
+      gap: 10px;
+    }
+
+    .btn {
+      padding: 8px 16px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.3s ease;
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background: var(--primary-dark);
+    }
+
+    .btn-secondary {
+      background: var(--secondary);
+      color: var(--dark);
+    }
+
+    .btn-secondary:hover {
+      background: var(--secondary-dark);
+    }
+
+    .btn-danger {
+      background: #F44336;
+      color: white;
+    }
+
+    .btn-danger:hover {
+      background: #D32F2F;
+    }
+
+    .btn-sm {
+      padding: 6px 12px;
+      font-size: 12px;
+    }
+
+    /* Agendamentos */
+    .agendamentos-container {
+      max-height: 500px;
+      overflow-y: auto;
+      padding-right: 10px;
+    }
+
+    .agendamentos-container::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    .agendamentos-container::-webkit-scrollbar-track {
+      background: #f1f1f1;
+      border-radius: 10px;
+    }
+
+    .agendamentos-container::-webkit-scrollbar-thumb {
+      background: var(--primary);
+      border-radius: 10px;
+    }
+
+    .dia-card {
+      background: white;
+      border-radius: 12px;
+      padding: 15px;
+      margin-bottom: 15px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+      border-left: 4px solid var(--primary);
+    }
+
+    .dia-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+
+    .dia-data {
+      font-weight: 600;
+      color: var(--dark);
+      font-size: 16px;
+    }
+
+    .dia-status {
+      font-size: 12px;
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-weight: 600;
+    }
+
+    .status-disponivel {
+      background: #E8F5E9;
+      color: var(--success);
+    }
+
+    .status-indisponivel {
+      background: #FFEBEE;
+      color: var(--primary);
+    }
+
+    .horario-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px;
+      background: #FAFAFA;
+      border-radius: 8px;
+      margin-bottom: 8px;
+    }
+
+    .horario-info {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .horario-hora {
+      font-weight: 600;
+      color: var(--dark);
+    }
+
+    .horario-cliente {
+      color: var(--gray);
+      font-size: 14px;
+    }
+
+    /* Folgas */
+    .dias-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+      gap: 12px;
+    }
+
+    .dia-folga {
+      background: white;
+      border-radius: 12px;
+      padding: 15px;
+      text-align: center;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+      transition: all 0.3s ease;
+      cursor: pointer;
+    }
+
+    .dia-folga:hover {
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+
+    .dia-folga.folga {
+      background: #FFF8E1;
+      border: 2px solid var(--secondary);
+    }
+
+    .dia-folga-data {
+      font-weight: 600;
+      margin-bottom: 8px;
+      font-size: 14px;
+    }
+
+    .dia-folga-status {
+      font-size: 12px;
+      padding: 4px 8px;
+      border-radius: 20px;
+      margin-bottom: 10px;
+      font-weight: 600;
+    }
+
+    .dia-folga-acoes {
+      display: flex;
+      justify-content: center;
+      gap: 5px;
+    }
+
+    /* Loading */
+    .loading {
+      text-align: center;
+      padding: 30px;
+      color: var(--gray);
+    }
+
+    .spinner {
+      border: 4px solid rgba(0, 0, 0, 0.1);
+      border-left-color: var(--primary);
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 15px;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    /* Modal */
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .modal-content {
+      background: white;
+      border-radius: 16px;
+      width: 90%;
+      max-width: 500px;
+      padding: 25px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+      padding-bottom: 15px;
+      border-bottom: 1px solid #eee;
+    }
+
+    .modal-title {
+      font-size: 20px;
+      font-weight: 600;
+      color: var(--primary);
+    }
+
+    .close-modal {
+      background: none;
+      border: none;
+      font-size: 24px;
+      cursor: pointer;
+      color: var(--gray);
+    }
+
+    .modal-body {
+      margin-bottom: 20px;
+    }
+
+    .form-group {
+      margin-bottom: 15px;
+    }
+
+    .form-label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: 600;
+      color: var(--dark);
+    }
+
+    .form-input {
+      width: 100%;
+      padding: 12px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      font-size: 16px;
+    }
+
+    .modal-footer {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+    }
+
+    /* Toast */
+    .toast {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background: var(--dark);
+      color: white;
+      padding: 15px 25px;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      z-index: 1001;
+      transform: translateY(100px);
+      opacity: 0;
+      transition: all 0.3s ease;
+    }
+
+    .toast.show {
+      transform: translateY(0);
+      opacity: 1;
+    }
+
+    .toast.success {
+      background: var(--success);
+    }
+
+    .toast.error {
+      background: var(--primary);
+    }
+
+    .toast.warning {
+      background: var(--warning);
+    }
+
+    /* Empty state */
+    .empty-state {
+      text-align: center;
+      padding: 40px 20px;
+      color: var(--gray);
+    }
+
+    .empty-state i {
+      font-size: 48px;
+      margin-bottom: 15px;
+      color: #E0E0E0;
+    }
+
+    .empty-state p {
+      margin-bottom: 20px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div class="logo">
+        <i class="fas fa-calendar-alt"></i>
+        <h1>Painel de Agendamentos</h1>
+      </div>
+    </header>
+
+    <div class="main-content">
+      <section class="card">
+        <div class="card-header">
+          <h2 class="card-title">
+            <i class="fas fa-clock"></i>
+            Agendamentos
+          </h2>
+          <div class="controls">
+            <button class="btn btn-primary btn-sm" id="btnAtualizar">
+              <i class="fas fa-sync-alt"></i>
+              Atualizar
+            </button>
+          </div>
+        </div>
+        <div class="agendamentos-container" id="listaAgendamentos">
+          <div class="loading">
+            <div class="spinner"></div>
+            <p>Carregando agendamentos...</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="card-header">
+          <h2 class="card-title">
+            <i class="fas fa-calendar-week"></i>
+            Controle de Folgas
+          </h2>
+          <div class="controls">
+            <button class="btn btn-secondary btn-sm" id="btnMarcarTodasFolgas">
+              <i class="fas fa-plus"></i>
+              Folga em Lote
+            </button>
+          </div>
+        </div>
+        <div class="dias-grid" id="diasContainer">
+          <div class="loading">
+            <div class="spinner"></div>
+            <p>Carregando dias...</p>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <!-- Modal para folga em lote -->
+  <div class="modal" id="modalFolgaLote">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title">Folga em Lote</h3>
+        <button class="close-modal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label">Data Inicial</label>
+          <input type="date" class="form-input" id="dataInicial">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Data Final</label>
+          <input type="date" class="form-input" id="dataFinal">
+        </div>
+        <p>Esta ação marcará folgas para todos os dias entre as datas selecionadas.</p>
+      </div>
+      <div class="modal-footer">
+        <button class="btn" id="btnCancelarFolgaLote">Cancelar</button>
+        <button class="btn btn-primary" id="btnConfirmarFolgaLote">Confirmar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast para notificações -->
+  <div class="toast" id="toast"></div>
+
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/9.6.11/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.11/firebase-firestore-compat.js"></script>
+
+  <script>
+    // Configuração do Firebase
+    const firebaseConfig = {
+      apiKey: "AIzaSyBP3rhyHOKpCTt6PKQdjgVtprUmoLy09wg",
+      authDomain: "d-amolador.firebaseapp.com",
+      projectId: "d-amolador",
+      storageBucket: "d-amolador.firebasestorage.app",
+      messagingSenderId: "882919276636",
+      appId: "1:882919276636:web:5f8c8ad014f30b0a5c6699"
+    };
+
+    // Inicializar Firebase
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+    const horariosFixos = ["09:00", "11:00", "13:00", "15:00"];
+
+    // Elementos da UI
+    const listaAgendamentos = document.getElementById('listaAgendamentos');
+    const diasContainer = document.getElementById('diasContainer');
+    const btnAtualizar = document.getElementById('btnAtualizar');
+    const btnMarcarTodasFolgas = document.getElementById('btnMarcarTodasFolgas');
+    const modalFolgaLote = document.getElementById('modalFolgaLote');
+    const btnCancelarFolgaLote = document.getElementById('btnCancelarFolgaLote');
+    const btnConfirmarFolgaLote = document.getElementById('btnConfirmarFolgaLote');
+    const toast = document.getElementById('toast');
+
+    // Funções de utilidade
+    function formatarDataBR(dataISO) {
+      const [ano, mes, dia] = dataISO.split("-");
+      return `${dia}/${mes}/${ano}`;
+    }
+
+    function formatarDataParaInput(dataISO) {
+      return dataISO;
+    }
+
+    function mostrarToast(mensagem, tipo = 'success') {
+      toast.textContent = mensagem;
+      toast.className = `toast ${tipo} show`;
+      
+      setTimeout(() => {
+        toast.classList.remove('show');
+      }, 3000);
+    }
+
+    // Funções para carregar dados
+    async function carregarAgendamentos() {
+      try {
+        const snapshot = await db.collection("agendamentos").get();
+        
+        if (snapshot.empty) {
+          listaAgendamentos.innerHTML = `
+            <div class="empty-state">
+              <i class="far fa-calendar-times"></i>
+              <p>Nenhum agendamento encontrado</p>
+            </div>
+          `;
+          return;
+        }
+
+        const promises = snapshot.docs.map(async doc => {
+          const dataId = doc.id;
+          const horarios = doc.data().horarios || [];
+
+          if (horarios.length === 0) return null;
+
+          const horarioPromises = horarios.map(horario => 
+            db.collection("agendamentos").doc(dataId).collection("horarios").doc(horario).get()
+          );
+          
+          const horarioDocs = await Promise.all(horarioPromises);
+          
+          const diaDiv = document.createElement('div');
+          diaDiv.className = 'dia-card';
+          
+          const status = horarios.length >= horariosFixos.length ? 'status-indisponivel' : 'status-disponivel';
+          const statusText = horarios.length >= horariosFixos.length ? 'Indisponível' : 'Disponível';
+          
+          diaDiv.innerHTML = `
+            <div class="dia-header">
+              <div class="dia-data">${formatarDataBR(dataId)}</div>
+              <div class="dia-status ${status}">${statusText}</div>
+            </div>
+          `;
+
+          horarioDocs.forEach((subdoc, index) => {
+            const horario = horarios[index];
+            const dados = subdoc.exists ? subdoc.data() : null;
+
+            const horarioDiv = document.createElement('div');
+            horarioDiv.className = 'horario-item';
+            
+            const clienteInfo = dados 
+              ? `${dados.nome} (${dados.contato})` 
+              : 'Dados não disponíveis';
+
+            horarioDiv.innerHTML = `
+              <div class="horario-info">
+                <div class="horario-hora">${horario}</div>
+                <div class="horario-cliente">${clienteInfo}</div>
+              </div>
+              <button class="btn btn-danger btn-sm" onclick="excluirAgendamento('${dataId}', '${horario}')">
+                <i class="fas fa-trash"></i>
+                Excluir
+              </button>
+            `;
+
+            diaDiv.appendChild(horarioDiv);
+          });
+
+          return diaDiv;
+        });
+
+        const resultados = await Promise.all(promises);
+        
+        listaAgendamentos.innerHTML = '';
+        resultados.filter(result => result !== null).forEach(diaDiv => {
+          listaAgendamentos.appendChild(diaDiv);
+        });
+      } catch (erro) {
+        console.error("Erro ao carregar agendamentos:", erro);
+        listaAgendamentos.innerHTML = '<p class="error">Erro ao carregar agendamentos</p>';
+        mostrarToast('Erro ao carregar agendamentos', 'error');
+      }
+    }
+
+    async function gerarDiasSemanas() {
+      try {
+        const hoje = new Date();
+        const diaSemana = hoje.getDay();
+        const domingoAtual = new Date(hoje);
+        domingoAtual.setDate(hoje.getDate() - diaSemana);
+
+        const dataIds = [];
+        for (let i = 0; i < 21; i++) {
+          const data = new Date(domingoAtual);
+          data.setDate(domingoAtual.getDate() + i);
+          const ano = data.getFullYear();
+          const mes = (data.getMonth() + 1).toString().padStart(2, '0');
+          const dia = data.getDate().toString().padStart(2, '0');
+          dataIds.push(`${ano}-${mes}-${dia}`);
+        }
+
+        const promises = dataIds.map(dataId => 
+          db.collection("agendamentos").doc(dataId).get()
+        );
+        
+        const docs = await Promise.all(promises);
+        
+        diasContainer.innerHTML = '';
+        
+        docs.forEach((doc, index) => {
+          const dataId = dataIds[index];
+          const dados = doc.exists ? doc.data() : null;
+          const horarios = dados && dados.horarios ? dados.horarios : [];
+          const isFolga = horarios.length >= horariosFixos.length;
+
+          const diaDiv = document.createElement('div');
+          diaDiv.className = `dia-folga ${isFolga ? 'folga' : ''}`;
+          
+          const status = isFolga 
+            ? '<div class="dia-folga-status status-indisponivel">Folga</div>' 
+            : '<div class="dia-folga-status status-disponivel">Disponível</div>';
+          
+          const acoes = isFolga 
+            ? `<button class="btn btn-danger btn-sm" onclick="removerFolga('${dataId}')">
+                 <i class="fas fa-times"></i>
+               </button>`
+            : `<button class="btn btn-secondary btn-sm" onclick="marcarFolga('${dataId}')">
+                 <i class="fas fa-plus"></i>
+               </button>`;
+
+          diaDiv.innerHTML = `
+            <div class="dia-folga-data">${formatarDataBR(dataId)}</div>
+            ${status}
+            <div class="dia-folga-acoes">
+              ${acoes}
+            </div>
+          `;
+
+          diasContainer.appendChild(diaDiv);
+        });
+      } catch (erro) {
+        console.error("Erro ao carregar dias:", erro);
+        diasContainer.innerHTML = '<p class="error">Erro ao carregar dias</p>';
+        mostrarToast('Erro ao carregar dias', 'error');
+      }
+    }
+
+    // Funções de ação
+    async function excluirAgendamento(dataId, horario) {
+      const confirmar = confirm(`Deseja realmente excluir o horário ${horario} do dia ${formatarDataBR(dataId)}?`);
+      if (!confirmar) return;
+
+      try {
+        await db.collection("agendamentos").doc(dataId).update({
+          horarios: firebase.firestore.FieldValue.arrayRemove(horario)
+        });
+
+        await db.collection("agendamentos").doc(dataId).collection("horarios").doc(horario).delete();
+
+        mostrarToast('Agendamento excluído com sucesso!', 'success');
+        setTimeout(() => {
+          carregarAgendamentos();
+          gerarDiasSemanas();
+        }, 1000);
+      } catch (erro) {
+        console.error("Erro ao excluir:", erro);
+        mostrarToast('Erro ao excluir o agendamento', 'error');
+      }
+    }
+
+    async function marcarFolga(dataId) {
+      try {
+        await db.collection("agendamentos").doc(dataId).set({
+          horarios: horariosFixos
+        }, { merge: true });
+
+        for (const h of horariosFixos) {
+          await db.collection("agendamentos").doc(dataId)
+            .collection("horarios").doc(h).set({
+              nome: "Folga",
+              contato: "-"
+            });
+        }
+
+        mostrarToast(`Folga marcada para ${formatarDataBR(dataId)}`, 'success');
+        setTimeout(() => {
+          carregarAgendamentos();
+          gerarDiasSemanas();
+        }, 1000);
+      } catch (erro) {
+        console.error("Erro:", erro);
+        mostrarToast('Erro ao marcar folga', 'error');
+      }
+    }
+
+    async function removerFolga(dataId) {
+      try {
+        for (const h of horariosFixos) {
+          await db.collection("agendamentos").doc(dataId).collection("horarios").doc(h).delete();
+        }
+
+        await db.collection("agendamentos").doc(dataId).update({
+          horarios: firebase.firestore.FieldValue.delete()
+        });
+
+        mostrarToast(`Folga removida de ${formatarDataBR(dataId)}`, 'success');
+        setTimeout(() => {
+          carregarAgendamentos();
+          gerarDiasSemanas();
+        }, 1000);
+      } catch (erro) {
+        console.error("Erro ao remover folga:", erro);
+        mostrarToast('Erro ao remover folga', 'error');
+      }
+    }
+
+    // Funções para folga em lote
+    function abrirModalFolgaLote() {
+      const hoje = new Date();
+      const amanha = new Date(hoje);
+      amanha.setDate(hoje.getDate() + 1);
+      
+      const dataInicial = document.getElementById('dataInicial');
+      const dataFinal = document.getElementById('dataFinal');
+      
+      dataInicial.value = formatarDataParaInput(hoje.toISOString().split('T')[0]);
+      dataFinal.value = formatarDataParaInput(amanha.toISOString().split('T')[0]);
+      
+      modalFolgaLote.style.display = 'flex';
+    }
+
+    async function marcarFolgaLote(dataInicial, dataFinal) {
+      try {
+        const inicio = new Date(dataInicial);
+        const fim = new Date(dataFinal);
+        
+        // Validar datas
+        if (inicio > fim) {
+          mostrarToast('Data inicial não pode ser maior que data final', 'error');
+          return;
+        }
+        
+        // Calcular diferença em dias
+        const diffTime = Math.abs(fim - inicio);
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+        
+        if (diffDays > 30) {
+          mostrarToast('Não é possível marcar folgas para mais de 30 dias', 'error');
+          return;
+        }
+        
+        // Marcar folgas para cada dia no intervalo
+        for (let i = 0; i < diffDays; i++) {
+          const data = new Date(inicio);
+          data.setDate(inicio.getDate() + i);
+          const ano = data.getFullYear();
+          const mes = (data.getMonth() + 1).toString().padStart(2, '0');
+          const dia = data.getDate().toString().padStart(2, '0');
+          const dataId = `${ano}-${mes}-${dia}`;
+          
+          await db.collection("agendamentos").doc(dataId).set({
+            horarios: horariosFixos
+          }, { merge: true });
+
+          for (const h of horariosFixos) {
+            await db.collection("agendamentos").doc(dataId)
+              .collection("horarios").doc(h).set({
+                nome: "Folga",
+                contato: "-"
+              });
+          }
+        }
+        
+        modalFolgaLote.style.display = 'none';
+        mostrarToast(`Folgas marcadas para ${diffDays} dias`, 'success');
+        setTimeout(() => {
+          carregarAgendamentos();
+          gerarDiasSemanas();
+        }, 1000);
+      } catch (erro) {
+        console.error("Erro ao marcar folgas em lote:", erro);
+        mostrarToast('Erro ao marcar folgas em lote', 'error');
+      }
+    }
+
+    // Event Listeners
+    btnAtualizar.addEventListener('click', () => {
+      carregarAgendamentos();
+      gerarDiasSemanas();
+      mostrarToast('Dados atualizados', 'success');
+    });
+
+    btnMarcarTodasFolgas.addEventListener('click', abrirModalFolgaLote);
+
+    btnCancelarFolgaLote.addEventListener('click', () => {
+      modalFolgaLote.style.display = 'none';
+    });
+
+    btnConfirmarFolgaLote.addEventListener('click', () => {
+      const dataInicial = document.getElementById('dataInicial').value;
+      const dataFinal = document.getElementById('dataFinal').value;
+      marcarFolgaLote(dataInicial, dataFinal);
+    });
+
+    // Fechar modal ao clicar fora
+    window.addEventListener('click', (event) => {
+      if (event.target === modalFolgaLote) {
+        modalFolgaLote.style.display = 'none';
+      }
+    });
+
+    // Inicializar aplicação
+    document.addEventListener('DOMContentLoaded', () => {
+      carregarAgendamentos();
+      gerarDiasSemanas();
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,1210 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Financeiro - Painel Administrativo</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.11/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.11/firebase-firestore-compat.js"></script>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background-color: #f8f9fa;
+            color: #333;
+            line-height: 1.6;
+        }
+        
+        .app-header {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            background-color: #ffffff;
+            padding: 15px 20px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .app-title {
+            color: #2c3e50;
+            font-size: 1.5em;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+        }
+        
+        .main-content {
+            padding: 0 20px 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .cards-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .card {
+            background-color: #ffffff;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+            border-left: 4px solid #007bff;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .card h3 {
+            color: #6c757d;
+            font-size: 0.9em;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .card .value {
+            font-size: 1.8em;
+            font-weight: 700;
+            color: #2c3e50;
+            margin-bottom: 5px;
+        }
+        
+        .card .trend {
+            font-size: 0.9em;
+            display: flex;
+            align-items: center;
+        }
+        
+        .card .trend.positive {
+            color: #28a745;
+        }
+        
+        .card .trend.negative {
+            color: #dc3545;
+        }
+        
+        .section {
+            background-color: #ffffff;
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+            margin-bottom: 30px;
+        }
+        
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+        
+        .section-title {
+            color: #2c3e50;
+            font-size: 1.3em;
+            font-weight: 600;
+        }
+        
+        .filters {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        
+        select, input {
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 0.9em;
+        }
+        
+        .tabela-container {
+            overflow-x: auto;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        table th, table td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+            font-size: 0.9em;
+        }
+        
+        table thead th {
+            background-color: #f2f2f2;
+            color: #555;
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 0.8em;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        
+        table thead th:hover {
+            background-color: #e9ecef;
+        }
+        
+        table tbody tr:hover {
+            background-color: #f8f9fa;
+        }
+        
+        .chart-container {
+            position: relative;
+            height: 300px;
+            margin-top: 20px;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #666;
+            font-style: italic;
+        }
+        
+        .loading-spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #007bff;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .no-data {
+            text-align: center;
+            padding: 40px;
+            color: #6c757d;
+            font-style: italic;
+        }
+        
+        .btn-adicionar {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            padding: 8px 15px;
+            cursor: pointer;
+            font-size: 0.9em;
+            transition: background-color 0.3s ease;
+        }
+        
+        .btn-adicionar:hover {
+            background-color: #0056b3;
+        }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0, 0, 0, 0.5);
+            justify-content: center;
+            align-items: center;
+            backdrop-filter: blur(5px);
+        }
+        
+        .modal-content {
+            background-color: #ffffff;
+            margin: auto;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            width: 90%;
+            max-width: 500px;
+            text-align: center;
+        }
+        
+        .modal-content h3 {
+            color: #2c3e50;
+            margin-bottom: 25px;
+            font-size: 1.5em;
+        }
+        
+        .modal-content input, .modal-content select {
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 20px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            font-size: 1em;
+            box-sizing: border-box;
+        }
+        
+        .modal-content button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 12px 25px;
+            margin: 0 10px;
+            cursor: pointer;
+            font-size: 1em;
+            transition: background-color 0.3s ease;
+        }
+        
+        .modal-content button:hover {
+            background-color: #0056b3;
+        }
+        
+        .modal-content button:last-child {
+            background-color: #6c757d;
+        }
+        
+        .modal-content button:last-child:hover {
+            background-color: #5a6268;
+        }
+        
+        @media (max-width: 768px) {
+            .app-header {
+                padding: 12px 15px;
+            }
+            
+            .app-title {
+                font-size: 1.3em;
+            }
+            
+            .main-content {
+                padding: 0 15px 15px;
+            }
+            
+            .section {
+                padding: 20px;
+            }
+            
+            .section-header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            
+            .filters {
+                width: 100%;
+            }
+            
+            select, input {
+                flex: 1;
+            }
+            
+            table th, table td {
+                padding: 8px 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="app-header">
+        <h1 class="app-title">Financeiro</h1>
+    </div>
+    
+    <div class="main-content">
+        <!-- Cards de Resumo -->
+        <div class="cards-container">
+            <div class="card">
+                <h3>Receita do Mês</h3>
+                <div class="value" id="receitaMes">R$ 0,00</div>
+                <div class="trend positive" id="variacaoReceita">
+                    <span>+0% em relação ao mês anterior</span>
+                </div>
+            </div>
+            
+            <div class="card">
+                <h3>Despesas do Mês</h3>
+                <div class="value" id="despesasMes">R$ 0,00</div>
+                <div class="trend negative" id="variacaoDespesas">
+                    <span>+0% em relação ao mês anterior</span>
+                </div>
+            </div>
+            
+            <div class="card">
+                <h3>Lucro Líquido</h3>
+                <div class="value" id="lucroMes">R$ 0,00</div>
+                <div class="trend positive" id="variacaoLucro">
+                    <span>+0% em relação ao mês anterior</span>
+                </div>
+            </div>
+            
+            <div class="card">
+                <h3>Média Diária</h3>
+                <div class="value" id="mediaDiaria">R$ 0,00</div>
+                <div class="trend positive" id="variacaoMedia">
+                    <span>+0% em relação ao mês anterior</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Gráficos -->
+        <div class="section">
+            <div class="section-header">
+                <h2 class="section-title">Estatísticas Financeiras</h2>
+                <div class="filters">
+                    <select id="filtroPeriodoGrafico">
+                        <option value="1" selected>Último mês</option>
+                        <option value="6">Últimos 6 meses</option>
+                        <option value="12">Últimos 12 meses</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="chart-container">
+                <canvas id="graficoReceitasDespesas"></canvas>
+            </div>
+            
+            <div class="chart-container">
+                <canvas id="graficoComparacaoMensal"></canvas>
+            </div>
+        </div>
+        
+        <!-- Relação Mensal -->
+        <div class="section">
+            <div class="section-header">
+                <h2 class="section-title">Relação Mensal</h2>
+                <div class="filters">
+                    <select id="filtroAno">
+                        <option value="2025" selected>2025</option>
+                        <option value="2026">2026</option>
+                        <option value="2027">2027</option>
+                    </select>
+                    <select id="filtroOrdenacao">
+                        <option value="mes">Ordenar por Mês</option>
+                        <option value="receita">Ordenar por Receita</option>
+                        <option value="despesa">Ordenar por Despesa</option>
+                        <option value="lucro">Ordenar por Lucro</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="tabela-container">
+                <table id="tabelaMensal">
+                    <thead>
+                        <tr>
+                            <th data-sort="mes">Mês</th>
+                            <th data-sort="receita">Receita</th>
+                            <th data-sort="despesa">Despesas</th>
+                            <th data-sort="lucro">Lucro</th>
+                            <th data-sort="media">Média Diária</th>
+                        </tr>
+                    </thead>
+                    <tbody id="corpoTabelaMensal">
+                        <tr>
+                            <td colspan="5" class="loading">
+                                <div class="loading-spinner"></div>
+                                <div>Carregando dados mensais...</div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <!-- Gastos Diários -->
+        <div class="section">
+            <div class="section-header">
+                <h2 class="section-title">Gastos Diários</h2>
+                <div class="filters">
+                    <input type="month" id="filtroMes" value="">
+                    <select id="filtroCategoria">
+                        <option value="">Todas as Categorias</option>
+                        <option value="material">Material</option>
+                        <option value="equipamento">Equipamento</option>
+                        <option value="manutencao">Manutenção</option>
+                        <option value="transporte">Transporte</option>
+                        <option value="outros">Outros</option>
+                    </select>
+                    <button class="btn-adicionar" onclick="abrirModalDespesa()">+ Adicionar Despesa</button>
+                </div>
+            </div>
+            
+            <div class="tabela-container">
+                <table id="tabelaDiaria">
+                    <thead>
+                        <tr>
+                            <th>Data</th>
+                            <th>Descrição</th>
+                            <th>Categoria</th>
+                            <th>Valor</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody id="corpoTabelaDiaria">
+                        <tr>
+                            <td colspan="5" class="loading">
+                                <div class="loading-spinner"></div>
+                                <div>Carregando gastos diários...</div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para Adicionar Despesa -->
+    <div id="modalDespesa" class="modal" style="display: none;">
+        <div class="modal-content">
+            <h3>Adicionar Despesa</h3>
+            <input type="date" id="despesaData" value="">
+            <input type="text" id="despesaDescricao" placeholder="Descrição da despesa">
+            <select id="despesaCategoria">
+                <option value="material">Material</option>
+                <option value="equipamento">Equipamento</option>
+                <option value="manutencao">Manutenção</option>
+                <option value="transporte">Transporte</option>
+                <option value="outros">Outros</option>
+            </select>
+            <input type="number" id="despesaValor" placeholder="Valor em R$" step="0.01">
+            <div>
+                <button id="confirmarDespesa">Salvar</button>
+                <button onclick="fecharModalDespesa()">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Configuração do Firebase
+        const firebaseConfig = {
+            apiKey: "AIzaSyBP3rhyHOKpCTt6PKQdjgVtprUmoLy09wg",
+            authDomain: "d-amolador.firebaseapp.com",
+            projectId: "d-amolador",
+            storageBucket: "d-amolador.firebasestorage.app",
+            messagingSenderId: "882919276636",
+            appId: "1:882919276636:web:5f8c8ad014f30b0a5c6699"
+        };
+        
+        // Inicializar Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+        
+        // Variáveis globais
+        let dadosMensais = [];
+        let dadosDiarios = [];
+        let graficoReceitasDespesas = null;
+        let graficoComparacaoMensal = null;
+        let dadosCarregados = false;
+        
+        // Inicialização
+        document.addEventListener('DOMContentLoaded', function() {
+            // Definir mês atual como padrão no filtro
+            const hoje = new Date();
+            const mesAtual = hoje.toISOString().slice(0, 7);
+            document.getElementById('filtroMes').value = mesAtual;
+            document.getElementById('despesaData').value = hoje.toISOString().slice(0, 10);
+            
+            // Definir ano atual como padrão no filtro (a partir de 2025)
+            const anoAtual = hoje.getFullYear();
+            const filtroAno = document.getElementById('filtroAno');
+            
+            // Se o ano atual for menor que 2025, definir 2025 como padrão
+            if (anoAtual < 2025) {
+                filtroAno.value = 2025;
+            } else {
+                // Adicionar opção para o ano atual se for 2025 ou superior
+                if (anoAtual >= 2025) {
+                    // Verificar se o ano atual já está na lista
+                    let anoExiste = false;
+                    for (let i = 0; i < filtroAno.options.length; i++) {
+                        if (parseInt(filtroAno.options[i].value) === anoAtual) {
+                            anoExiste = true;
+                            break;
+                        }
+                    }
+                    
+                    // Se não existe, adicionar
+                    if (!anoExiste) {
+                        const novaOpcao = document.createElement('option');
+                        novaOpcao.value = anoAtual;
+                        novaOpcao.textContent = anoAtual;
+                        filtroAno.appendChild(novaOpcao);
+                    }
+                    
+                    // Definir como selecionado
+                    filtroAno.value = anoAtual;
+                }
+            }
+            
+            // Configurar event listeners para filtros
+            document.getElementById('filtroAno').addEventListener('change', function() {
+                carregarDadosMensais().then(() => {
+                    atualizarGraficos();
+                    carregarResumoFinanceiro();
+                });
+            });
+            
+            document.getElementById('filtroOrdenacao').addEventListener('change', ordenarTabelaMensal);
+            document.getElementById('filtroPeriodoGrafico').addEventListener('change', atualizarGraficos);
+            document.getElementById('filtroMes').addEventListener('change', carregarGastosDiarios);
+            document.getElementById('filtroCategoria').addEventListener('change', filtrarGastosDiarios);
+            document.getElementById('confirmarDespesa').addEventListener('click', salvarDespesa);
+            
+            // Configurar ordenação da tabela mensal
+            document.querySelectorAll('#tabelaMensal th[data-sort]').forEach(th => {
+                th.addEventListener('click', () => {
+                    const campo = th.getAttribute('data-sort');
+                    ordenarTabelaMensal(campo);
+                });
+            });
+            
+            // Carregar dados iniciais
+            carregarDadosFinanceiros();
+        });
+        
+        // Função para carregar todos os dados financeiros
+        async function carregarDadosFinanceiros() {
+            try {
+                // Mostrar loading nos cards
+                document.getElementById('receitaMes').textContent = 'Carregando...';
+                document.getElementById('despesasMes').textContent = 'Carregando...';
+                document.getElementById('lucroMes').textContent = 'Carregando...';
+                document.getElementById('mediaDiaria').textContent = 'Carregando...';
+                
+                await carregarDadosMensais();
+                await carregarGastosDiarios();
+                await carregarResumoFinanceiro();
+                
+                // Atualizar gráficos imediatamente após carregar os dados
+                dadosCarregados = true;
+                atualizarGraficos();
+                
+            } catch (error) {
+                console.error('Erro ao carregar dados financeiros:', error);
+                // Restaurar valores padrão em caso de erro
+                document.getElementById('receitaMes').textContent = 'R$ 0,00';
+                document.getElementById('despesasMes').textContent = 'R$ 0,00';
+                document.getElementById('lucroMes').textContent = 'R$ 0,00';
+                document.getElementById('mediaDiaria').textContent = 'R$ 0,00';
+            }
+        }
+        
+        // Função para carregar dados mensais
+        async function carregarDadosMensais() {
+            const ano = document.getElementById('filtroAno').value;
+            const corpoTabela = document.getElementById('corpoTabelaMensal');
+            
+            corpoTabela.innerHTML = `
+                <tr>
+                    <td colspan="5" class="loading">
+                        <div class="loading-spinner"></div>
+                        <div>Carregando dados mensais...</div>
+                    </td>
+                </tr>
+            `;
+            
+            try {
+                // Buscar dados de pagamentos (receitas)
+                const receitasSnapshot = await db.collectionGroup('pagamentos').get();
+                
+                // Buscar dados de despesas
+                const despesasSnapshot = await db.collection('despesas').get();
+                
+                // Processar receitas por mês
+                const receitasPorMes = {};
+                receitasSnapshot.forEach(doc => {
+                    const { valor, dataRegistro } = doc.data();
+                    let data;
+                    
+                    // Verificar se dataRegistro é um timestamp do Firestore
+                    if (dataRegistro && dataRegistro.seconds) {
+                        data = new Date(dataRegistro.seconds * 1000);
+                    } else if (dataRegistro instanceof Date) {
+                        data = dataRegistro;
+                    } else {
+                        // Tentar extrair data do ID do documento pai (data do agendamento)
+                        try {
+                            const caminho = doc.ref.path.split('/');
+                            const dataStr = caminho[1];
+                            data = new Date(dataStr);
+                        } catch (e) {
+                            data = new Date(); // Data atual como fallback
+                        }
+                    }
+                    
+                    const chaveMes = `${data.getFullYear()}-${String(data.getMonth() + 1).padStart(2, '0')}`;
+                    
+                    if (!receitasPorMes[chaveMes]) {
+                        receitasPorMes[chaveMes] = 0;
+                    }
+                    receitasPorMes[chaveMes] += valor;
+                });
+                
+                // Processar despesas por mês
+                const despesasPorMes = {};
+                despesasSnapshot.forEach(doc => {
+                    const { valor, data } = doc.data();
+                    let dataDespesa;
+                    
+                    if (data && data.seconds) {
+                        dataDespesa = new Date(data.seconds * 1000);
+                    } else if (data instanceof Date) {
+                        dataDespesa = data;
+                    } else {
+                        dataDespesa = new Date(); // Data atual como fallback
+                    }
+                    
+                    const chaveMes = `${dataDespesa.getFullYear()}-${String(dataDespesa.getMonth() + 1).padStart(2, '0')}`;
+                    
+                    if (!despesasPorMes[chaveMes]) {
+                        despesasPorMes[chaveMes] = 0;
+                    }
+                    despesasPorMes[chaveMes] += valor;
+                });
+                
+                // Combinar dados
+                dadosMensais = [];
+                const nomesMeses = [
+                    'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+                    'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
+                ];
+                
+                for (let mes = 1; mes <= 12; mes++) {
+                    const chaveMes = `${ano}-${String(mes).padStart(2, '0')}`;
+                    const receita = receitasPorMes[chaveMes] || 0;
+                    const despesa = despesasPorMes[chaveMes] || 0;
+                    const lucro = receita - despesa;
+                    
+                    // Calcular dias no mês
+                    const diasNoMes = new Date(ano, mes, 0).getDate();
+                    const mediaDiaria = receita > 0 ? receita / diasNoMes : 0;
+                    
+                    dadosMensais.push({
+                        mes: mes,
+                        nomeMes: nomesMeses[mes - 1],
+                        receita: receita,
+                        despesa: despesa,
+                        lucro: lucro,
+                        mediaDiaria: mediaDiaria,
+                        ano: ano
+                    });
+                }
+                
+                // Ordenar tabela
+                ordenarTabelaMensal();
+                
+            } catch (error) {
+                console.error('Erro ao carregar dados mensais:', error);
+                corpoTabela.innerHTML = `
+                    <tr>
+                        <td colspan="5" style="text-align: center; color: #dc3545;">
+                            Erro ao carregar dados mensais
+                        </td>
+                    </tr>
+                `;
+            }
+        }
+        
+        // Função para ordenar a tabela mensal
+        function ordenarTabelaMensal(campo = 'mes') {
+            const ordem = document.getElementById('filtroOrdenacao').value;
+            const campoOrdenacao = ordem || campo;
+            
+            dadosMensais.sort((a, b) => {
+                if (campoOrdenacao === 'mes') {
+                    return a.mes - b.mes;
+                } else {
+                    return b[campoOrdenacao] - a[campoOrdenacao];
+                }
+            });
+            
+            atualizarTabelaMensal();
+        }
+        
+        // Função para atualizar a tabela mensal
+        function atualizarTabelaMensal() {
+            const corpoTabela = document.getElementById('corpoTabelaMensal');
+            
+            if (dadosMensais.length === 0) {
+                corpoTabela.innerHTML = `
+                    <tr>
+                        <td colspan="5" class="no-data">
+                            Nenhum dado disponível para o período selecionado
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+            
+            corpoTabela.innerHTML = '';
+            
+            dadosMensais.forEach(dados => {
+                const linha = document.createElement('tr');
+                
+                // Destacar o mês atual
+                const hoje = new Date();
+                const isMesAtual = dados.mes === hoje.getMonth() + 1 && 
+                                  document.getElementById('filtroAno').value == hoje.getFullYear();
+                
+                if (isMesAtual) {
+                    linha.style.backgroundColor = '#e9f5ff';
+                }
+                
+                linha.innerHTML = `
+                    <td>${dados.nomeMes} ${isMesAtual ? '(Atual)' : ''}</td>
+                    <td>${formatarValor(dados.receita)}</td>
+                    <td>${formatarValor(dados.despesa)}</td>
+                    <td style="color: ${dados.lucro >= 0 ? '#28a745' : '#dc3545'}; font-weight: 600;">
+                        ${formatarValor(dados.lucro)}
+                    </td>
+                    <td>${formatarValor(dados.mediaDiaria)}</td>
+                `;
+                
+                corpoTabela.appendChild(linha);
+            });
+        }
+        
+        // Função para carregar gastos diários
+        async function carregarGastosDiarios() {
+            const mesSelecionado = document.getElementById('filtroMes').value;
+            const corpoTabela = document.getElementById('corpoTabelaDiaria');
+            
+            corpoTabela.innerHTML = `
+                <tr>
+                    <td colspan="5" class="loading">
+                        <div class="loading-spinner"></div>
+                        <div>Carregando gastos diários...</div>
+                    </td>
+                </tr>
+            `;
+            
+            try {
+                // Buscar todas as despesas
+                const despesasSnapshot = await db.collection('despesas').get();
+                
+                dadosDiarios = [];
+                despesasSnapshot.forEach(doc => {
+                    const despesa = doc.data();
+                    despesa.id = doc.id;
+                    
+                    // Converter timestamp do Firestore para Date
+                    if (despesa.data && despesa.data.seconds) {
+                        despesa.data = new Date(despesa.data.seconds * 1000);
+                    } else if (typeof despesa.data === 'string') {
+                        despesa.data = new Date(despesa.data);
+                    } else {
+                        despesa.data = new Date(); // Data atual como fallback
+                    }
+                    
+                    dadosDiarios.push(despesa);
+                });
+                
+                // Filtrar por mês selecionado
+                if (mesSelecionado) {
+                    const [ano, mes] = mesSelecionado.split('-');
+                    dadosDiarios = dadosDiarios.filter(despesa => {
+                        const dataDespesa = despesa.data;
+                        return dataDespesa.getFullYear() == ano && 
+                               (dataDespesa.getMonth() + 1) == mes;
+                    });
+                }
+                
+                // Ordenar por data (mais recente primeiro)
+                dadosDiarios.sort((a, b) => b.data - a.data);
+                
+                filtrarGastosDiarios();
+                
+            } catch (error) {
+                console.error('Erro ao carregar gastos diários:', error);
+                corpoTabela.innerHTML = `
+                    <tr>
+                        <td colspan="5" style="text-align: center; color: #dc3545;">
+                            Erro ao carregar gastos diários
+                        </td>
+                    </tr>
+                `;
+            }
+        }
+        
+        // Função para filtrar gastos diários por categoria
+        function filtrarGastosDiarios() {
+            const categoria = document.getElementById('filtroCategoria').value;
+            const corpoTabela = document.getElementById('corpoTabelaDiaria');
+            
+            const dadosFiltrados = categoria ? 
+                dadosDiarios.filter(despesa => despesa.categoria === categoria) : 
+                dadosDiarios;
+            
+            if (dadosFiltrados.length === 0) {
+                corpoTabela.innerHTML = `
+                    <tr>
+                        <td colspan="5" class="no-data">
+                            Nenhum gasto encontrado para os filtros selecionados
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+            
+            corpoTabela.innerHTML = '';
+            
+            dadosFiltrados.forEach(despesa => {
+                const linha = document.createElement('tr');
+                const dataFormatada = despesa.data.toLocaleDateString('pt-BR');
+                
+                linha.innerHTML = `
+                    <td>${dataFormatada}</td>
+                    <td>${despesa.descricao || 'Sem descrição'}</td>
+                    <td>${despesa.categoria || 'Outros'}</td>
+                    <td style="color: #dc3545; font-weight: 600;">${formatarValor(despesa.valor)}</td>
+                    <td>
+                        <button onclick="excluirDespesa('${despesa.id}')" style="background: none; border: none; color: #dc3545; cursor: pointer;">🗑️</button>
+                    </td>
+                `;
+                
+                corpoTabela.appendChild(linha);
+            });
+        }
+        
+        // Função para carregar resumo financeiro
+        async function carregarResumoFinanceiro() {
+            try {
+                const hoje = new Date();
+                const mesAtual = hoje.getMonth() + 1;
+                const anoAtual = hoje.getFullYear();
+                
+                // Calcular totais do mês atual
+                let receitaTotal = 0;
+                let despesaTotal = 0;
+                
+                // Usar dados já carregados em dadosMensais
+                const dadosMesAtual = dadosMensais.find(d => 
+                    d.mes === mesAtual && d.ano == anoAtual);
+                
+                if (dadosMesAtual) {
+                    receitaTotal = dadosMesAtual.receita;
+                    despesaTotal = dadosMesAtual.despesa;
+                }
+                
+                const lucroTotal = receitaTotal - despesaTotal;
+                const diasNoMes = new Date(anoAtual, mesAtual, 0).getDate();
+                const mediaDiaria = receitaTotal / diasNoMes;
+                
+                // Buscar dados do mês anterior para comparação
+                const mesAnterior = mesAtual === 1 ? 12 : mesAtual - 1;
+                const anoMesAnterior = mesAtual === 1 ? anoAtual - 1 : anoAtual;
+                
+                let receitaMesAnterior = 0;
+                let despesaMesAnterior = 0;
+                
+                const dadosMesAnterior = dadosMensais.find(d => 
+                    d.mes === mesAnterior && d.ano == anoMesAnterior);
+                
+                if (dadosMesAnterior) {
+                    receitaMesAnterior = dadosMesAnterior.receita;
+                    despesaMesAnterior = dadosMesAnterior.despesa;
+                }
+                
+                const lucroMesAnterior = receitaMesAnterior - despesaMesAnterior;
+                const diasNoMesAnterior = new Date(anoMesAnterior, mesAnterior, 0).getDate();
+                const mediaDiariaMesAnterior = receitaMesAnterior / diasNoMesAnterior;
+                
+                // Calcular variações percentuais
+                const variacaoReceita = receitaMesAnterior > 0 ? 
+                    ((receitaTotal - receitaMesAnterior) / receitaMesAnterior) * 100 : 0;
+                
+                const variacaoDespesa = despesaMesAnterior > 0 ? 
+                    ((despesaTotal - despesaMesAnterior) / despesaMesAnterior) * 100 : 0;
+                
+                const variacaoLucro = lucroMesAnterior !== 0 ? 
+                    ((lucroTotal - lucroMesAnterior) / Math.abs(lucroMesAnterior)) * 100 : 0;
+                
+                const variacaoMedia = mediaDiariaMesAnterior > 0 ? 
+                    ((mediaDiaria - mediaDiariaMesAnterior) / mediaDiariaMesAnterior) * 100 : 0;
+                
+                // Atualizar cards
+                document.getElementById('receitaMes').textContent = formatarValor(receitaTotal);
+                document.getElementById('despesasMes').textContent = formatarValor(despesaTotal);
+                document.getElementById('lucroMes').textContent = formatarValor(lucroTotal);
+                document.getElementById('mediaDiaria').textContent = formatarValor(mediaDiaria);
+                
+                // Atualizar tendências
+                atualizarTrend('variacaoReceita', variacaoReceita, 'receita');
+                atualizarTrend('variacaoDespesas', variacaoDespesa, 'despesa');
+                atualizarTrend('variacaoLucro', variacaoLucro, 'lucro');
+                atualizarTrend('variacaoMedia', variacaoMedia, 'media');
+                
+            } catch (error) {
+                console.error('Erro ao carregar resumo financeiro:', error);
+            }
+        }
+        
+        // Função para atualizar indicadores de tendência
+        function atualizarTrend(elementId, variacao, tipo) {
+            const element = document.getElementById(elementId);
+            const valorAbsoluto = Math.abs(variacao).toFixed(1);
+            const sinal = variacao >= 0 ? '+' : '-';
+            
+            let texto = '';
+            if (tipo === 'receita') {
+                texto = variacao >= 0 ? 
+                    `+${valorAbsoluto}% em relação ao mês anterior` : 
+                    `-${valorAbsoluto}% em relação ao mês anterior`;
+            } else if (tipo === 'despesa') {
+                texto = variacao >= 0 ? 
+                    `+${valorAbsoluto}% em relação ao mês anterior` : 
+                    `-${valorAbsoluto}% em relação ao mês anterior`;
+            } else if (tipo === 'lucro') {
+                texto = variacao >= 0 ? 
+                    `+${valorAbsoluto}% em relação ao mês anterior` : 
+                    `-${valorAbsoluto}% em relação ao mês anterior`;
+            } else if (tipo === 'media') {
+                texto = variacao >= 0 ? 
+                    `+${valorAbsoluto}% em relação ao mês anterior` : 
+                    `-${valorAbsoluto}% em relação ao mês anterior`;
+            }
+            
+            element.innerHTML = `<span>${texto}</span>`;
+            element.className = `trend ${variacao >= 0 ? 'positive' : 'negative'}`;
+        }
+        
+        // Função para atualizar gráficos
+        function atualizarGraficos() {
+            if (!dadosCarregados || dadosMensais.length === 0) {
+                // Se não há dados, mostrar mensagem nos containers dos gráficos
+                const ctx1 = document.getElementById('graficoReceitasDespesas');
+                const ctx2 = document.getElementById('graficoComparacaoMensal');
+                
+                if (ctx1 && ctx2) {
+                    ctx1.parentElement.innerHTML = '<div class="no-data">Nenhum dado disponível para os gráficos</div>';
+                    ctx2.parentElement.innerHTML = '<div class="no-data">Nenhum dado disponível para os gráficos</div>';
+                }
+                return;
+            }
+            
+            const periodo = parseInt(document.getElementById('filtroPeriodoGrafico').value);
+            const hoje = new Date();
+            const mesesParaExibir = [];
+            
+            // Gerar lista de meses para exibir
+            for (let i = periodo - 1; i >= 0; i--) {
+                const data = new Date(hoje.getFullYear(), hoje.getMonth() - i, 1);
+                const mes = data.getMonth() + 1;
+                const ano = data.getFullYear();
+                mesesParaExibir.push({ mes, ano, nome: `${mes}/${ano}` });
+            }
+            
+            // Preparar dados para os gráficos
+            const labels = mesesParaExibir.map(m => m.nome);
+            const receitas = [];
+            const despesas = [];
+            const lucros = [];
+            
+            mesesParaExibir.forEach(m => {
+                const dadosMes = dadosMensais.find(d => 
+                    d.mes === m.mes && d.ano == m.ano);
+                
+                if (dadosMes) {
+                    receitas.push(dadosMes.receita);
+                    despesas.push(dadosMes.despesa);
+                    lucros.push(dadosMes.lucro);
+                } else {
+                    receitas.push(0);
+                    despesas.push(0);
+                    lucros.push(0);
+                }
+            });
+            
+            // Criar/atualizar gráfico de receitas e despesas
+            const ctx1 = document.getElementById('graficoReceitasDespesas').getContext('2d');
+            
+            if (graficoReceitasDespesas) {
+                graficoReceitasDespesas.destroy();
+            }
+            
+            graficoReceitasDespesas = new Chart(ctx1, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'Receitas',
+                            data: receitas,
+                            backgroundColor: 'rgba(40, 167, 69, 0.7)',
+                            borderColor: 'rgba(40, 167, 69, 1)',
+                            borderWidth: 1
+                        },
+                        {
+                            label: 'Despesas',
+                            data: despesas,
+                            backgroundColor: 'rgba(220, 53, 69, 0.7)',
+                            borderColor: 'rgba(220, 53, 69, 1)',
+                            borderWidth: 1
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    return 'R$ ' + value.toLocaleString('pt-BR');
+                                }
+                            }
+                        }
+                    },
+                    plugins: {
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    let label = context.dataset.label || '';
+                                    if (label) {
+                                        label += ': ';
+                                    }
+                                    label += formatarValor(context.raw);
+                                    return label;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+            
+            // Criar/atualizar gráfico de comparação mensal
+            const ctx2 = document.getElementById('graficoComparacaoMensal').getContext('2d');
+            
+            if (graficoComparacaoMensal) {
+                graficoComparacaoMensal.destroy();
+            }
+            
+            graficoComparacaoMensal = new Chart(ctx2, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'Lucro Líquido',
+                            data: lucros,
+                            backgroundColor: 'rgba(0, 123, 255, 0.2)',
+                            borderColor: 'rgba(0, 123, 255, 1)',
+                            borderWidth: 2,
+                            tension: 0.3,
+                            fill: true
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            ticks: {
+                                callback: function(value) {
+                                    return 'R$ ' + value.toLocaleString('pt-BR');
+                                }
+                            }
+                        }
+                    },
+                    plugins: {
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    let label = context.dataset.label || '';
+                                    if (label) {
+                                        label += ': ';
+                                    }
+                                    label += formatarValor(context.raw);
+                                    return label;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        
+        // Funções para gerenciar despesas
+        function abrirModalDespesa() {
+            document.getElementById('modalDespesa').style.display = 'flex';
+        }
+        
+        function fecharModalDespesa() {
+            document.getElementById('modalDespesa').style.display = 'none';
+        }
+        
+        async function salvarDespesa() {
+            const data = document.getElementById('despesaData').value;
+            const descricao = document.getElementById('despesaDescricao').value.trim();
+            const categoria = document.getElementById('despesaCategoria').value;
+            const valor = parseFloat(document.getElementById('despesaValor').value);
+            
+            if (!data || !descricao || isNaN(valor) || valor <= 0) {
+                alert('Por favor, preencha todos os campos corretamente.');
+                return;
+            }
+            
+            try {
+                await db.collection('despesas').add({
+                    data: new Date(data),
+                    descricao: descricao,
+                    categoria: categoria,
+                    valor: valor
+                });
+                
+                fecharModalDespesa();
+                await carregarGastosDiarios();
+                await carregarDadosMensais();
+                await carregarResumoFinanceiro();
+                atualizarGraficos();
+                
+                // Limpar campos
+                document.getElementById('despesaDescricao').value = '';
+                document.getElementById('despesaValor').value = '';
+                
+            } catch (error) {
+                console.error('Erro ao salvar despesa:', error);
+                alert('Erro ao salvar despesa. Tente novamente.');
+            }
+        }
+        
+        async function excluirDespesa(id) {
+            if (!confirm('Tem certeza que deseja excluir esta despesa?')) {
+                return;
+            }
+            
+            try {
+                await db.collection('despesas').doc(id).delete();
+                await carregarGastosDiarios();
+                await carregarDadosMensais();
+                await carregarResumoFinanceiro();
+                atualizarGraficos();
+            } catch (error) {
+                console.error('Erro ao excluir despesa:', error);
+                alert('Erro ao excluir despesa. Tente novamente.');
+            }
+        }
+        
+        // Função para formatar valores monetários
+        function formatarValor(valor) {
+            return valor.toLocaleString('pt-BR', {
+                style: 'currency',
+                currency: 'BRL'
+            });
+        }
+    </script>
+</body>
+</html>
