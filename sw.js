@@ -9,7 +9,7 @@ const urlsToCache = [
   './agendamentos.html',
   './registros.html',
   './financeiro.html',
-  './favicon.ico',
+  './favicon.png',
   // Adicione outros arquivos HTML que você tenha
 ];
 
