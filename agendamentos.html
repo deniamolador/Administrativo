@@ -245,6 +245,28 @@
       color: #d4a7a7;
     }
 
+    .input-info {
+      font-size: 0.85rem;
+      color: #d46a6a;
+      margin-top: -10px;
+      margin-bottom: 10px;
+      font-style: italic;
+    }
+
+    .char-counter {
+      font-size: 0.8rem;
+      color: #d46a6a;
+      text-align: right;
+      margin-top: -15px;
+      margin-bottom: 15px;
+      font-weight: 500;
+    }
+
+    .char-counter.limit-reached {
+      color: #ff6b6b;
+      font-weight: bold;
+    }
+
     .button-link {
       display: block;
       width: 100%;
@@ -548,13 +570,17 @@
       <div id="qntLabel" class="value-warning">Por logística, o valor mínimo é de R$ 60,00.</div>
 
       <label>Nome completo:</label>
-      <input type="text" id="nome" required />
+      <input type="text" id="nome" maxlength="40" placeholder="Digite seu nome completo" required oninput="atualizarContadorNome()" />
+      <div class="char-counter" id="contadorNome">0/40 caracteres</div>
 
       <label>Contato (WhatsApp):</label>
-      <input type="number" id="contato" placeholder="Ex: 11987654321" maxlength="11" required />
+      <input type="tel" id="contato" placeholder="(92) 9 9999-9999" required />
+      <div class="input-info">Digite apenas números, o formato será aplicado automaticamente</div>
 
       <label>Localização:</label>
-      <input type="text" id="localizacao" placeholder="Digite sua localização" required />
+      <input type="text" id="localizacao" maxlength="200" placeholder="Rua, número da casa e Bairro" required oninput="atualizarContadorLocalizacao()" />
+      <div class="char-counter" id="contadorLocalizacao">0/200 caracteres</div>
+      <div class="input-info">Informe: Rua, número da casa e Bairro.</div>
 
       <button class="button-link" onclick="concluirAgendamento()">✅ Concluir Agendamento</button>
     </div>
@@ -601,6 +627,73 @@
     let horariosOcupados = {};
     let agendamentoSelecionadoCancelamento = null;
 
+    // Função para formatar telefone
+    function formatarTelefone(input) {
+      // Remove tudo que não é número
+      let value = input.value.replace(/\D/g, '');
+      
+      // Limita a 11 dígitos
+      if (value.length > 11) {
+        value = value.substring(0, 11);
+      }
+      
+      // Aplica a formatação
+      if (value.length <= 10) {
+        value = value.replace(/(\d{2})(\d{4})(\d{0,4})/, '($1) $2-$3');
+      } else {
+        value = value.replace(/(\d{2})(\d{5})(\d{0,4})/, '($1) $2-$3');
+      }
+      
+      input.value = value;
+    }
+
+    // Função para formatar data no padrão brasileiro
+    function formatarDataBrasileira(dataISO) {
+      const partes = dataISO.split('-');
+      if (partes.length === 3) {
+        return `${partes[2]}/${partes[1]}/${partes[0]}`;
+      }
+      return dataISO;
+    }
+
+    // Função para atualizar contador do nome
+    function atualizarContadorNome() {
+      const input = document.getElementById('nome');
+      const contador = document.getElementById('contadorNome');
+      const comprimento = input.value.length;
+      
+      contador.textContent = `${comprimento}/40 caracteres`;
+      
+      if (comprimento >= 40) {
+        contador.classList.add('limit-reached');
+      } else {
+        contador.classList.remove('limit-reached');
+      }
+    }
+
+    // Função para atualizar contador da localização
+    function atualizarContadorLocalizacao() {
+      const input = document.getElementById('localizacao');
+      const contador = document.getElementById('contadorLocalizacao');
+      const comprimento = input.value.length;
+      
+      contador.textContent = `${comprimento}/200 caracteres`;
+      
+      if (comprimento >= 200) {
+        contador.classList.add('limit-reached');
+      } else {
+        contador.classList.remove('limit-reached');
+      }
+    }
+
+    // Função para limitar caracteres do nome
+    function limitarCaracteresNome(input) {
+      if (input.value.length > 40) {
+        input.value = input.value.substring(0, 40);
+      }
+      atualizarContadorNome();
+    }
+
     // Carregar dados salvos do localStorage
     function carregarDadosSalvos() {
       const dadosSalvos = localStorage.getItem('dadosAgendamento');
@@ -609,6 +702,10 @@
         document.getElementById('nome').value = dados.nome || '';
         document.getElementById('contato').value = dados.contato || '';
         document.getElementById('localizacao').value = dados.localizacao || '';
+        
+        // Atualizar contadores
+        atualizarContadorNome();
+        atualizarContadorLocalizacao();
       }
     }
 
@@ -666,6 +763,16 @@
       criarCalendario();
       carregarDadosSalvos();
       verificarExibirBotaoCancelamento();
+      
+      // Adicionar event listener para formatação do telefone
+      document.getElementById('contato').addEventListener('input', function() {
+        formatarTelefone(this);
+      });
+
+      // Adicionar event listener para limitar caracteres do nome
+      document.getElementById('nome').addEventListener('input', function() {
+        limitarCaracteresNome(this);
+      });
     }
 
     function criarCalendario() {
@@ -780,16 +887,43 @@
       const textoQtd = document.getElementById("alicatesTexto");
       const valor = input.value;
       textoQtd.textContent = valor ? `${valor} Alicates` : "";
+      
+      // Mostrar mensagem informativa se quantidade for menor que 5
+      const qntLabel = document.getElementById("qntLabel");
+      if (valor < 5) {
+        qntLabel.textContent = "Por questão de logística, a quantidade mínima deve ser de 5 alicates ou superior para atendimento a domicílio.";
+        qntLabel.style.display = "block";
+      } else {
+        qntLabel.textContent = "Por logística, o valor mínimo é de R$ 60,00.";
+        qntLabel.style.display = "block";
+      }
     }
 
     async function concluirAgendamento() {
       const qnt = parseInt(document.getElementById("quantidade").value);
       const nome = document.getElementById("nome").value.trim();
       const contato = document.getElementById("contato").value.trim();
-      const local = document.getElementById("localizacao").value.trim();
+      let local = document.getElementById("localizacao").value.trim();
 
+      // Adicionar Manaus/AM ao final da localização
+      if (local && !local.toLowerCase().includes('manaus')) {
+        local = `${local}, Manaus/AM`;
+      }
+
+      // Validar campos
       if (!qnt || qnt < 5 || !nome || !contato || !local || !dataSelecionada || !horarioSelecionado) {
         alert("Por favor, preencha todos os campos corretamente.\nMínimo de 5 alicates.");
+        return;
+      }
+
+      // Validar comprimento dos campos
+      if (nome.length > 40) {
+        alert("O nome deve ter no máximo 40 caracteres.");
+        return;
+      }
+
+      if (local.length > 200) {
+        alert("A localização deve ter no máximo 200 caracteres.");
         return;
       }
 
@@ -825,9 +959,11 @@
         salvarAgendamentoNoLocalStorage(agendamento);
 
         const linkMaps = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(local)}`;
+        const dataFormatada = formatarDataBrasileira(dataSelecionada);
+        
         const mensagem = 
           `Olá! Gostaria de confirmar meu agendamento:\n\n` +
-          `● *Dia:* ${diaSelecionado}, ${dataSelecionada}\n` +
+          `● *Dia:* ${diaSelecionado}, ${dataFormatada}\n` +
           `● *Horário:* ${horarioSelecionado}\n` +
           `● *Alicates:* ${qnt}\n` +
           `● *Nome:* ${nome}\n` +
@@ -864,9 +1000,10 @@
         agendamentos.forEach((agendamento, index) => {
           const item = document.createElement('div');
           item.className = 'agendamento-item';
+          const dataFormatada = formatarDataBrasileira(agendamento.data);
           item.innerHTML = `
             <strong>${agendamento.nome}</strong><br>
-            Data: ${agendamento.data} | Horário: ${agendamento.horario}<br>
+            Data: ${dataFormatada} | Horário: ${agendamento.horario}<br>
             Alicates: ${agendamento.quantidade}
           `;
           item.onclick = () => selecionarAgendamentoCancelamento(index, item);
@@ -903,9 +1040,11 @@
       }
       
       const agendamento = agendamentoSelecionadoCancelamento;
+      const dataFormatada = formatarDataBrasileira(agendamento.data);
+      
       const mensagem = 
         `Olá! Gostaria de solicitar o cancelamento do seguinte agendamento:\n\n` +
-        `● *Dia:* ${agendamento.data}\n` +
+        `● *Dia:* ${dataFormatada}\n` +
         `● *Horário:* ${agendamento.horario}\n` +
         `● *Alicates:* ${agendamento.quantidade}\n` +
         `● *Nome:* ${agendamento.nome}\n` +
