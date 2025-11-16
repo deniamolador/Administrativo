@@ -1,5 +1,5 @@
 // Nome do cache
-const CACHE_NAME = 'painel-admin-v1.0.0';
+const CACHE_NAME = 'painel-admin-v1.0.1';
 
 // Arquivos para cachear na instalação
 const urlsToCache = [
