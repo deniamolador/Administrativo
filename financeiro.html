@@ -57,30 +57,36 @@
         .card {
             background-color: #ffffff;
             border-radius: 12px;
-            padding: 20px;
+            padding: 15px 20px;
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
             border-left: 4px solid #007bff;
             display: flex;
             flex-direction: column;
+            min-height: 120px;
+        }
+        
+        .card.mes-atual {
+            background-color: #f0f9ff;
+            border-left-color: #28a745;
         }
         
         .card h3 {
             color: #6c757d;
             font-size: 0.9em;
-            margin-bottom: 10px;
+            margin-bottom: 8px;
             text-transform: uppercase;
             letter-spacing: 0.5px;
         }
         
         .card .value {
-            font-size: 1.8em;
+            font-size: 1.6em;
             font-weight: 700;
             color: #2c3e50;
             margin-bottom: 5px;
         }
         
         .card .trend {
-            font-size: 0.9em;
+            font-size: 0.85em;
             display: flex;
             align-items: center;
         }
@@ -356,6 +362,15 @@
                     <span>+0% em relação ao mês anterior</span>
                 </div>
             </div>
+            
+            <!-- Novo card de Total Diário -->
+            <div class="card">
+                <h3>Total Diário</h3>
+                <div class="value" id="totalDiario">R$ 0,00</div>
+                <div class="trend positive" id="variacaoTotalDiario">
+                    <span>+0% em relação ao dia anterior</span>
+                </div>
+            </div>
         </div>
         
         <!-- Gráficos -->
@@ -503,6 +518,7 @@
         // Variáveis globais
         let dadosMensais = [];
         let dadosDiarios = [];
+        let receitasDiarias = [];
         let graficoReceitasDespesas = null;
         let graficoComparacaoMensal = null;
         let dadosCarregados = false;
@@ -581,9 +597,11 @@
                 document.getElementById('despesasMes').textContent = 'Carregando...';
                 document.getElementById('lucroMes').textContent = 'Carregando...';
                 document.getElementById('mediaDiaria').textContent = 'Carregando...';
+                document.getElementById('totalDiario').textContent = 'Carregando...';
                 
                 await carregarDadosMensais();
                 await carregarGastosDiarios();
+                await carregarReceitasDiarias();
                 await carregarResumoFinanceiro();
                 
                 // Atualizar gráficos imediatamente após carregar os dados
@@ -597,6 +615,7 @@
                 document.getElementById('despesasMes').textContent = 'R$ 0,00';
                 document.getElementById('lucroMes').textContent = 'R$ 0,00';
                 document.getElementById('mediaDiaria').textContent = 'R$ 0,00';
+                document.getElementById('totalDiario').textContent = 'R$ 0,00';
             }
         }
         
@@ -675,10 +694,6 @@
                 
                 // Combinar dados
                 dadosMensais = [];
-                const nomesMeses = [
-                    'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
-                    'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
-                ];
                 
                 for (let mes = 1; mes <= 12; mes++) {
                     const chaveMes = `${ano}-${String(mes).padStart(2, '0')}`;
@@ -692,7 +707,7 @@
                     
                     dadosMensais.push({
                         mes: mes,
-                        nomeMes: nomesMeses[mes - 1],
+                        nomeMes: String(mes).padStart(2, '0'), // Formato numérico (01, 02, etc.)
                         receita: receita,
                         despesa: despesa,
                         lucro: lucro,
@@ -713,6 +728,44 @@
                         </td>
                     </tr>
                 `;
+            }
+        }
+        
+        // Função para carregar receitas diárias
+        async function carregarReceitasDiarias() {
+            try {
+                // Buscar dados de pagamentos (receitas)
+                const receitasSnapshot = await db.collectionGroup('pagamentos').get();
+                
+                receitasDiarias = [];
+                receitasSnapshot.forEach(doc => {
+                    const { valor, dataRegistro } = doc.data();
+                    let data;
+                    
+                    // Verificar se dataRegistro é um timestamp do Firestore
+                    if (dataRegistro && dataRegistro.seconds) {
+                        data = new Date(dataRegistro.seconds * 1000);
+                    } else if (dataRegistro instanceof Date) {
+                        data = dataRegistro;
+                    } else {
+                        // Tentar extrair data do ID do documento pai (data do agendamento)
+                        try {
+                            const caminho = doc.ref.path.split('/');
+                            const dataStr = caminho[1];
+                            data = new Date(dataStr);
+                        } catch (e) {
+                            data = new Date(); // Data atual como fallback
+                        }
+                    }
+                    
+                    receitasDiarias.push({
+                        data: data,
+                        valor: valor
+                    });
+                });
+                
+            } catch (error) {
+                console.error('Erro ao carregar receitas diárias:', error);
             }
         }
         
@@ -749,20 +802,22 @@
             
             corpoTabela.innerHTML = '';
             
+            const hoje = new Date();
+            const mesAtual = hoje.getMonth() + 1;
+            const anoAtual = hoje.getFullYear();
+            
             dadosMensais.forEach(dados => {
                 const linha = document.createElement('tr');
                 
-                // Destacar o mês atual
-                const hoje = new Date();
-                const isMesAtual = dados.mes === hoje.getMonth() + 1 && 
-                                  document.getElementById('filtroAno').value == hoje.getFullYear();
+                // Destacar o mês atual com cor de fundo
+                const isMesAtual = dados.mes === mesAtual && dados.ano == anoAtual;
                 
                 if (isMesAtual) {
-                    linha.style.backgroundColor = '#e9f5ff';
+                    linha.style.backgroundColor = '#f0f9ff';
                 }
                 
                 linha.innerHTML = `
-                    <td>${dados.nomeMes} ${isMesAtual ? '(Atual)' : ''}</td>
+                    <td>${dados.nomeMes}</td>
                     <td>${formatarValor(dados.receita)}</td>
                     <td>${formatarValor(dados.despesa)}</td>
                     <td style="color: ${dados.lucro >= 0 ? '#28a745' : '#dc3545'}; font-weight: 600;">
@@ -901,6 +956,17 @@
                 const diasNoMes = new Date(anoAtual, mesAtual, 0).getDate();
                 const mediaDiaria = receitaTotal / diasNoMes;
                 
+                // Calcular total diário (receitas do dia atual)
+                const hojeStr = hoje.toISOString().slice(0, 10);
+                let totalDiario = 0;
+                
+                receitasDiarias.forEach(receita => {
+                    const dataReceitaStr = receita.data.toISOString().slice(0, 10);
+                    if (dataReceitaStr === hojeStr) {
+                        totalDiario += receita.valor;
+                    }
+                });
+                
                 // Buscar dados do mês anterior para comparação
                 const mesAnterior = mesAtual === 1 ? 12 : mesAtual - 1;
                 const anoMesAnterior = mesAtual === 1 ? anoAtual - 1 : anoAtual;
@@ -920,6 +986,19 @@
                 const diasNoMesAnterior = new Date(anoMesAnterior, mesAnterior, 0).getDate();
                 const mediaDiariaMesAnterior = receitaMesAnterior / diasNoMesAnterior;
                 
+                // Calcular total diário do dia anterior
+                const ontem = new Date(hoje);
+                ontem.setDate(hoje.getDate() - 1);
+                const ontemStr = ontem.toISOString().slice(0, 10);
+                let totalDiarioOntem = 0;
+                
+                receitasDiarias.forEach(receita => {
+                    const dataReceitaStr = receita.data.toISOString().slice(0, 10);
+                    if (dataReceitaStr === ontemStr) {
+                        totalDiarioOntem += receita.valor;
+                    }
+                });
+                
                 // Calcular variações percentuais
                 const variacaoReceita = receitaMesAnterior > 0 ? 
                     ((receitaTotal - receitaMesAnterior) / receitaMesAnterior) * 100 : 0;
@@ -933,17 +1012,33 @@
                 const variacaoMedia = mediaDiariaMesAnterior > 0 ? 
                     ((mediaDiaria - mediaDiariaMesAnterior) / mediaDiariaMesAnterior) * 100 : 0;
                 
+                const variacaoTotalDiario = totalDiarioOntem > 0 ? 
+                    ((totalDiario - totalDiarioOntem) / totalDiarioOntem) * 100 : 0;
+                
                 // Atualizar cards
                 document.getElementById('receitaMes').textContent = formatarValor(receitaTotal);
                 document.getElementById('despesasMes').textContent = formatarValor(despesaTotal);
                 document.getElementById('lucroMes').textContent = formatarValor(lucroTotal);
                 document.getElementById('mediaDiaria').textContent = formatarValor(mediaDiaria);
+                document.getElementById('totalDiario').textContent = formatarValor(totalDiario);
                 
                 // Atualizar tendências
                 atualizarTrend('variacaoReceita', variacaoReceita, 'receita');
                 atualizarTrend('variacaoDespesas', variacaoDespesa, 'despesa');
                 atualizarTrend('variacaoLucro', variacaoLucro, 'lucro');
                 atualizarTrend('variacaoMedia', variacaoMedia, 'media');
+                atualizarTrend('variacaoTotalDiario', variacaoTotalDiario, 'totalDiario');
+                
+                // Destacar card do mês atual
+                const cards = document.querySelectorAll('.card');
+                cards.forEach(card => {
+                    card.classList.remove('mes-atual');
+                });
+                
+                // Adicionar classe ao card do mês atual (primeiro card)
+                if (cards.length > 0) {
+                    cards[0].classList.add('mes-atual');
+                }
                 
             } catch (error) {
                 console.error('Erro ao carregar resumo financeiro:', error);
@@ -973,6 +1068,10 @@
                 texto = variacao >= 0 ? 
                     `+${valorAbsoluto}% em relação ao mês anterior` : 
                     `-${valorAbsoluto}% em relação ao mês anterior`;
+            } else if (tipo === 'totalDiario') {
+                texto = variacao >= 0 ? 
+                    `+${valorAbsoluto}% em relação ao dia anterior` : 
+                    `-${valorAbsoluto}% em relação ao dia anterior`;
             }
             
             element.innerHTML = `<span>${texto}</span>`;
@@ -1002,7 +1101,7 @@
                 const data = new Date(hoje.getFullYear(), hoje.getMonth() - i, 1);
                 const mes = data.getMonth() + 1;
                 const ano = data.getFullYear();
-                mesesParaExibir.push({ mes, ano, nome: `${mes}/${ano}` });
+                mesesParaExibir.push({ mes, ano, nome: `${String(mes).padStart(2, '0')}/${ano}` });
             }
             
             // Preparar dados para os gráficos
@@ -1168,6 +1267,7 @@
                 fecharModalDespesa();
                 await carregarGastosDiarios();
                 await carregarDadosMensais();
+                await carregarReceitasDiarias();
                 await carregarResumoFinanceiro();
                 atualizarGraficos();
                 
